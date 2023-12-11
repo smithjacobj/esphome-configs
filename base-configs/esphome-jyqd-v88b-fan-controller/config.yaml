@@ -1,0 +1,85 @@
+substitutions:
+  DEVICE_NAME: !secret DEVICE_NAME
+  DEVICE_FRIENDLY_NAME: !secret DEVICE_FRIENDLY_NAME
+  BOARD_TYPE: nodemcu-32s # this is the option for HiLetGo ESP-32S
+  
+  # GPIO connections to BLDC motor controller (MC)
+  # IMPORTANT: ensure all I/O is isolated between ESP and MC (e.g. optocoupler)
+  SPEED_PIN: "" # PWM connects VR to 5V on MC
+  SPEED_SENSOR_PIN: "" # Connect M to (MC)GND; read the optocoupler signal
+  # NOTE: "off" is M floating; connecting to either 5V or (MC)GND chooses direction
+  FORWARD_PIN: "" # connects ZF to 5V on MC
+  REVERSE_PIN: "" # connects ZF to (MC)GND on MC
+
+  # Target min/max speeds in RPM as read by SPEED_SENSOR_PIN
+  # TODO: determine what rate (pulses/rotation) the SPEED_SENSOR_PIN outputs
+  MIN_SPEED: 25
+  MAX_SPEED: 150
+  # The motor controller likely has an input spec for PWM; make sure this falls in that range and is
+  # supported by your ESP platform
+  MC_PWM_FREQ: 4882Hz # 14 bits of resolution available on ESP32, see
+                      # https://esphome.io/components/output/ledc#recommended-frequencies 
+
+  LOG_LEVEL: DEBUG
+
+esphome:
+  name: ${DEVICE_NAME}
+  friendly_name: ${DEVICE_FRIENDLY_NAME}
+
+esp32:
+  board: ${BOARD_TYPE}
+  framework:
+    type: esp-idf
+
+logger:
+  level: ${LOG_LEVEL}
+
+wifi:
+  networks:
+    <<: !secret WIFI_NETWORKS
+
+api:
+
+output:
+  - platform: template
+    id: fan_direction
+    type: binary
+    write_action:
+      # toggle direction
+      - if:
+          condition:
+            lambda: return state;
+          then:
+            output.turn_off: fan_reverse_output
+            output.turn_on: fan_forward_output
+          else:
+            output.turn_off: fan_forward_output
+            output.turn_on: fan_reverse_output
+  - platform: gpio
+    id: fan_forward_output
+    pin: ${FORWARD_PIN}
+  - platform: gpio
+    id: fan_reverse_output
+    pin: ${REVERSE_PIN}
+
+  # this is the raw GPIO PWM output to the fan controller  
+  - platform: ledc
+    internal: true  # we'll expose this as the below `speed` control
+    pin: ${SPEED_PIN}
+    id: fan_speed_pwm_control
+    frequency: ${MC_PWM_FREQ}
+  # this is the actual control we want exposed to HA
+  - platform: speed
+    output: fan_speed_pwm_control
+    name: Fan Speed
+    direction_output: fan_direction
+    restore_mode: RESTORE_DEFAULT_OFF
+
+sensor:
+  # handy for troubleshooting
+  - platform: wifi_signal
+    name: WiFi Signal
+  - platform: pulse_counter
+    internal: true # if we decide to expose this we'll do it as a template exposing RPM
+    id: fan_speed_sensor
+    pin: ${SPEED_SENSOR_PIN}

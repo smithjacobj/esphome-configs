@@ -1,0 +1,67 @@
+substitutions:
+  CH0_PIN: GPIO18
+  CH0_FAULT_PIN: GPIO4
+
+  CH1_PIN: GPIO10
+  CH1_FAULT_PIN: GPIO3
+
+  LOG_LEVEL: DEBUG
+
+esphome:
+  name: ${DEVICE_NAME}
+  friendly_name: ${DEVICE_FRIENDLY_NAME}
+  platformio_options:
+    board_build.flash_mode: dio
+
+esp32:
+  variant: ESP32C3
+  board: esp32-c3-devkitm-1
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      CONFIG_COMPILER_OPTIMIZATION: Debug
+      CONFIG_ESP_SYSTEM_GDBSTUB_RUNTIME: y
+      CONFIG_ESP_SYSTEM_PANIC_GDBSTUB: y
+
+logger:
+  level: ${LOG_LEVEL}
+
+wifi:
+  networks:
+    <<: !secret WIFI_NETWORKS
+
+api:
+ota:
+
+external_components:
+  - source: components
+    components: [esp32_rmt_led_strip]
+
+status_led:
+  pin:
+    number: 5
+
+sensor:
+  - platform: adc
+    pin: ${CH0_FAULT_PIN}
+    name: Ch0 Voltage
+    attenuation: auto
+    device_class: Voltage
+    filters:
+      - multiply: 5.6 # 10k / 2.2k voltage divider
+
+light:
+  - platform: esp32_rmt_led_strip
+    name: Ch0
+    num_leds: 4
+    rgb_order: RGB
+    rmt_channel: 0
+    pin: ${CH0_PIN}
+    sync_start: 77us
+    intermission: 2.5ms
+    bit0_high: 22us
+    bit0_low: 22us
+    bit1_high: 22us
+    bit1_low: 61us
+    pulse_distance_coding: true
+    # default_transition_length: 0s # FIXME: this is here to reduce logic noise for debugging
