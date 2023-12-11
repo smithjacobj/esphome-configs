@@ -1,9 +1,8 @@
 # Basic Config
 esphome:
-  name: emporia-smart-plug
+  name: ${DEVICE_NAME}
   platform: ESP8266
   board: esp01_1m
-  name_add_mac_suffix: True
 
 wifi:
   networks:

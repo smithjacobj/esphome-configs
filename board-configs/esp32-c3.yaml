@@ -1,0 +1,10 @@
+esphome:
+  name: ${DEVICE_NAME}
+  platformio_options:
+    board_build.flash_mode: dio
+
+esp32:
+  variant: ESP32C3
+  board: esp32-c3-devkitm-1
+  framework:
+    type: esp-idf

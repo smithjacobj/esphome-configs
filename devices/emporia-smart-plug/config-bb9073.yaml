@@ -1,0 +1,4 @@
+substitutions:
+  DEVICE_NAME: emporia-smart-plug-bb9073
+
+<<: !include ../../base-configs/emporia-smart-plug/esphome.yaml

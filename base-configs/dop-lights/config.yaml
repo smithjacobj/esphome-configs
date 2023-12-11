@@ -9,7 +9,6 @@ substitutions:
 
 esphome:
   name: ${DEVICE_NAME}
-  friendly_name: ${DEVICE_FRIENDLY_NAME}
   platformio_options:
     board_build.flash_mode: dio
 

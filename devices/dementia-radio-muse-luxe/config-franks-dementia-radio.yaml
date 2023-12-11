@@ -1,0 +1,4 @@
+substitutions:
+  DEVICE_NAME: franks-dementia-radio
+
+<<: !include ../../base-configs/dementia-radio-muse-luxe/esphome.yaml

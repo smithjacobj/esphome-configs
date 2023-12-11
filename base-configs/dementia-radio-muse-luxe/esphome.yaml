@@ -14,8 +14,7 @@ globals:
 
 substitutions:
   lib_path: !secret lib_path # not really secret but this makes sure you configure it!
-  device_name: franks-dementia-radio
-  friendly_name: Frank's Dementia Radio
+  device_name: ${DEVICE_NAME}
   default_vol: '0.25'
   min_vol: '0.05'
   max_vol: '1.0'
