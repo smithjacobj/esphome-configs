@@ -15,20 +15,6 @@ static const char *const TAG = "esp32_rmt_led_strip";
 
 static constexpr uint8_t RMT_CLK_DIV = 2;
 static constexpr float CLK_RATIO = (float) APB_CLK_FREQ / RMT_CLK_DIV / 1e09f;
-static constexpr int LEVEL_HIGH = 1;
-static constexpr int LEVEL_LOW = 0;
-
-namespace {
-enum dgoColor : uint8_t {
-  DGO_RED = 1,
-  DGO_GREEN,
-  DGO_BLUE,
-  DGO_WHITE,
-  DGO_PURPLE,
-  DGO_YELLOW,
-  DGO_CYAN,
-};
-}
 
 static bool is_whitish(const uint8_t red, const uint8_t green, const uint8_t blue)
 {
@@ -43,20 +29,20 @@ static bool is_whitish(const uint8_t red, const uint8_t green, const uint8_t blu
   return red_pct_delta < THRESHOLD && green_pct_delta < THRESHOLD && blue_pct_delta < THRESHOLD;
 }
 
-static uint8_t get_dgo_color(uint8_t *color_buf) {
-  uint8_t red = color_buf[0];
-  uint8_t green = color_buf[1];
-  uint8_t blue = color_buf[2];
+static uint8_t get_rds_rgbw_02_color(uint8_t *color_buf) {
+  const uint8_t red = color_buf[0];
+  const uint8_t green = color_buf[1];
+  const uint8_t blue = color_buf[2];
   ESP_LOGD(TAG, "red: %d, green: %d, blue: %d", red, green, blue);
   if (is_whitish(red, green, blue))
-    return DGO_WHITE;
+    return RDS_RGBW_02_WHITE;
   if (red >= green && blue >= green)
-    return DGO_PURPLE;
+    return RDS_RGBW_02_PURPLE;
   if (red >= blue && green >= blue)
-    return DGO_YELLOW;
+    return RDS_RGBW_02_YELLOW;
   if (green >= red && blue >= red)
-    return DGO_CYAN;
-  return DGO_RED;
+    return RDS_RGBW_02_CYAN;
+  return RDS_RGBW_02_RED;
 }
 
 void ESP32RMTLEDStripLightOutput::setup() {
@@ -80,7 +66,7 @@ void ESP32RMTLEDStripLightOutput::setup() {
   }
 
   ExternalRAMAllocator<rmt_item32_t> rmt_allocator(ExternalRAMAllocator<rmt_item32_t>::ALLOW_FAILURE);
-  this->rmt_buf_ = rmt_allocator.allocate(buffer_size * 8);  // 8 bits per byte, 1 rmt_item32_t per bit
+  this->rmt_buf_ = rmt_allocator.allocate(this->get_rmt_buffer_size_());
 
   rmt_config_t config;
   memset(&config, 0, sizeof(config));
@@ -114,14 +100,14 @@ void ESP32RMTLEDStripLightOutput::set_led_params(uint32_t bit0_high, uint32_t bi
                                                  uint32_t bit1_low) {
   // 0-bit
   this->bit0_.duration0 = (uint32_t) (CLK_RATIO * bit0_high);
-  this->bit0_.level0 = LEVEL_HIGH;
+  this->bit0_.level0 = 1;
   this->bit0_.duration1 = (uint32_t) (CLK_RATIO * bit0_low);
-  this->bit0_.level1 = LEVEL_LOW;
+  this->bit0_.level1 = 0;
   // 1-bit
   this->bit1_.duration0 = (uint32_t) (CLK_RATIO * bit1_high);
-  this->bit1_.level0 = LEVEL_HIGH;
+  this->bit1_.level0 = this->encoding_ != ENCODING_BI_PHASE ? 1 : 0;
   this->bit1_.duration1 = (uint32_t) (CLK_RATIO * bit1_low);
-  this->bit1_.level1 = LEVEL_LOW;
+  this->bit1_.level1 = this->encoding_ != ENCODING_BI_PHASE ? 0 : 1;
 }
 
 void ESP32RMTLEDStripLightOutput::set_sync_start(uint32_t sync_start) {
@@ -171,25 +157,23 @@ void ESP32RMTLEDStripLightOutput::write_state(light::LightState *state) {
 
   // 1-bit addressing
   for (int addr = 0; addr < this->num_leds_; addr++) {
-    psrc = this->buf_;
-    pdest = this->rmt_buf_;
     len = 0;
+    // psrc = this->buf_;
+    pdest = this->rmt_buf_;
 
-    for (int addr = 0; addr < 5; addr++) {
-      // we need to figure out if this is linear encoding, flag encoding, etc.
-      // 0 is "all" though
-      // pdest->val = (1 << addr) ? this->bit1_.val : this->bit0_.val;
-      pdest->val = this->bit0_.val;
-      if (this->sync_start_ > 0 && addr == 0) {
+    for (int i = 0; i < 4; i++) {
+      pdest->val = ((addr + 1) >> (3 - i)) & 1 ? this->bit1_.val : this->bit0_.val;
+      // pdest->val = this->bit0_.val;
+      if (this->sync_start_ > 0 && i == 0) {
         pdest->duration0 = this->sync_start_;
       }
       pdest++;
       len++;
     }
     
-    uint8_t color = get_dgo_color(psrc);
-    for (int i = 0; i < 3; i++) {
-      pdest->val = (color >> (2 - i)) & 1 ? this->bit1_.val : this->bit0_.val;
+    uint8_t color = get_rds_rgbw_02_color(psrc);
+    for (int i = 0; i < 4; i++) {
+      pdest->val = (color >> (3 - i)) & 1 ? this->bit1_.val : this->bit0_.val;
       pdest++;
       len++;
     }
@@ -203,17 +187,20 @@ void ESP32RMTLEDStripLightOutput::write_state(light::LightState *state) {
       }
       psrc++;
     }
-    // for (int pad = 0; pad < (32 - 5 - 3); pad++) {
-    //   pdest->val = this->bit1_.val;
-    //   pdest++;
-    //   len++;
-    // }
+    if (this->is_rgbw_) psrc++;
 
-    if (this->use_pulse_distance_) {
-      // if we're using pulse distance, we need a 33rd high state to bookend the last distance.
+    if (this->encoding_ == ENCODING_PULSE_DISTANCE) {
+      // if we're using pulse distance, we need a final high state to bookend the last distance.
       pdest->val = this->bit0_.val;
       pdest++;
       len++;
+    }
+
+    assert(len <= this->get_rmt_buffer_size_());
+    for (int i = 0; i < len; i++) {
+      const rmt_item32_t item = this->rmt_buf_[i];
+      ESP_LOGVV(TAG, "RMT%03dHi: %fus", i, ((float)item.duration0) / CLK_RATIO / 1000.f);
+      ESP_LOGVV(TAG, "RMT%03dLo: %fus", i, ((float)item.duration1) / CLK_RATIO / 1000.f);
     }
 
     if (rmt_write_items(this->channel_, this->rmt_buf_, len, true) != ESP_OK) {
@@ -304,9 +291,34 @@ void ESP32RMTLEDStripLightOutput::dump_config() {
   ESP_LOGCONFIG(TAG, "  RGB Order: %s", rgb_order);
   ESP_LOGCONFIG(TAG, "  Max refresh rate: %" PRIu32, *this->max_refresh_rate_);
   ESP_LOGCONFIG(TAG, "  Number of LEDs: %u", this->num_leds_);
+  const char* encoding = "UNKNOWN";
+  switch (this->encoding_) {
+    case ENCODING_PULSE_LENGTH:
+      encoding = "PULSE_LENGTH";
+      break;
+    case ENCODING_PULSE_DISTANCE:
+      encoding = "PULSE_DISTANCE";
+      break;
+    case ENCODING_BI_PHASE:
+      encoding = "BI_PHASE";
+      break;
+  }
+  ESP_LOGCONFIG(TAG, "  Encoding: %s", encoding);
 }
 
 float ESP32RMTLEDStripLightOutput::get_setup_priority() const { return setup_priority::HARDWARE; }
+
+size_t ESP32RMTLEDStripLightOutput::get_bits_per_packet_() const {
+  const size_t bits = this->get_bytes_per_packet_() * 8;
+  if (this->encoding_ == ENCODING_PULSE_DISTANCE) {
+    return bits + 1; // an extra bit is needed to "bookend" the last distance.
+  }
+  return bits;
+}
+
+size_t ESP32RMTLEDStripLightOutput::get_rmt_buffer_size_() const {
+  return this->num_leds_ * this->get_bits_per_packet_();
+}
 
 }  // namespace esp32_rmt_led_strip
 }  // namespace esphome

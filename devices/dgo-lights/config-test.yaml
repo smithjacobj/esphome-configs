@@ -1,4 +1,0 @@
-substitutions:
-  DEVICE_NAME: dgo-test
-
-<<: !include ../../base-configs/dop-lights/config.yaml

@@ -1,0 +1,6 @@
+<<: !include
+  file: base-configs/dop-lights/config.yaml
+  vars:
+    LOG_LEVEL: DEBUG
+    DEVICE_NAME: holiday-lights-test
+

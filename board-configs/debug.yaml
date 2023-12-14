@@ -1,0 +1,7 @@
+# WARNING!!! this will break boot loop fallback, use only for local testing!!!
+esp32:
+  framework:
+    sdkconfig_options:
+      CONFIG_COMPILER_OPTIMIZATION: Debug
+      CONFIG_ESP_SYSTEM_GDBSTUB_RUNTIME: y
+      CONFIG_ESP_SYSTEM_PANIC_GDBSTUB: y

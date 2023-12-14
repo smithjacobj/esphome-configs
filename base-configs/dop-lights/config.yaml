@@ -5,22 +5,13 @@ substitutions:
   CH1_PIN: GPIO10
   CH1_FAULT_PIN: GPIO3
 
-  LOG_LEVEL: DEBUG
+packages:
+  esp32-c3: !include ../../board-configs/esp32-c3.yaml
 
 esphome:
   name: ${DEVICE_NAME}
-  platformio_options:
-    board_build.flash_mode: dio
-
-esp32:
-  variant: ESP32C3
-  board: esp32-c3-devkitm-1
-  framework:
-    type: esp-idf
-    sdkconfig_options:
-      CONFIG_COMPILER_OPTIMIZATION: Debug
-      CONFIG_ESP_SYSTEM_GDBSTUB_RUNTIME: y
-      CONFIG_ESP_SYSTEM_PANIC_GDBSTUB: y
+  includes:
+    - base-configs/dop-lights/light_effects.h
 
 logger:
   level: ${LOG_LEVEL}
@@ -33,12 +24,8 @@ api:
 ota:
 
 external_components:
-  - source: components
-    components: [esp32_rmt_led_strip]
-
-status_led:
-  pin:
-    number: 5
+  - source: base-configs/dop-lights/components
+    components: [esp32_rmt_led_strip, light]
 
 sensor:
   - platform: adc
@@ -52,15 +39,31 @@ sensor:
 light:
   - platform: esp32_rmt_led_strip
     name: Ch0
-    num_leds: 4
+    chipset: RDS-RGBW-02
+    num_leds: 15
     rgb_order: RGB
+    is_rgbw: true
     rmt_channel: 0
     pin: ${CH0_PIN}
-    sync_start: 77us
-    intermission: 2.5ms
-    bit0_high: 22us
-    bit0_low: 22us
-    bit1_high: 22us
-    bit1_low: 61us
-    pulse_distance_coding: true
-    # default_transition_length: 0s # FIXME: this is here to reduce logic noise for debugging
+    default_transition_length: 0s
+    restore_mode: RESTORE_DEFAULT_ON
+    effects:
+      - addressable_rainbow:
+          speed: 10
+          width: 15
+      - addressable_lambda:
+          name: Candy Cane
+          update_interval: 1h
+          lambda: static_colors(it, {RED, WHITE});
+      - addressable_lambda:
+          name: Red Green
+          update_interval: 1h
+          lambda: static_colors(it, {RED, GREEN});
+      - addressable_lambda:
+          name: Five Color
+          update_interval: 1h
+          lambda: static_colors(it, {RED, GREEN, BLUE, YELLOW, PURPLE});
+      - addressable_rainbow:
+          name: ARE GEE BEE
+          speed: 10
+          width: 150

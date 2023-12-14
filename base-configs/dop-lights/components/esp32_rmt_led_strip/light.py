@@ -35,6 +35,14 @@ RGB_ORDERS = {
     "BRG": RGBOrder.ORDER_BRG,
 }
 
+Encoding = esp32_rmt_led_strip_ns.enum("Encoding")
+
+ENCODINGS = {
+    "PULSE_LENGTH": Encoding.ENCODING_PULSE_LENGTH,
+    "PULSE_DISTANCE": Encoding.ENCODING_PULSE_DISTANCE,
+    "BI_PHASE": Encoding.ENCODING_BI_PHASE,
+}
+
 
 @dataclass
 class LEDStripTimings:
@@ -42,6 +50,10 @@ class LEDStripTimings:
     bit0_low: int
     bit1_high: int
     bit1_low: int
+    encoding: Encoding = Encoding.ENCODING_PULSE_LENGTH
+    sync_start: int = 0
+    intermission: int = 0
+    is_rgbw: bool = False
 
 
 CHIPSETS = {
@@ -49,12 +61,18 @@ CHIPSETS = {
     "SK6812": LEDStripTimings(300, 900, 600, 600),
     "APA106": LEDStripTimings(350, 1360, 1360, 350),
     "SM16703": LEDStripTimings(300, 900, 1360, 350),
+    "RDS-RGBW-02": LEDStripTimings(
+        22_000, 22_000, 22_000, 61_000,
+        encoding = Encoding.ENCODING_PULSE_DISTANCE,
+        sync_start = 77_000,
+        intermission = 5_000),
+    # todo: still need a way to adjust which view function we use
 }
 
 
 CONF_IS_RGBW = "is_rgbw"
 CONF_SYNC_START = "sync_start"
-CONF_PULSE_DISTANCE_CODING = "pulse_distance_coding"
+CONF_ENCODING = "encoding"
 CONF_INTERMISSION = "intermission"
 CONF_BIT0_HIGH = "bit0_high"
 CONF_BIT0_LOW = "bit0_low"
@@ -113,7 +131,7 @@ CONFIG_SCHEMA = cv.All(
                 "custom",
             ): cv.positive_time_period_nanoseconds,
             cv.Optional(CONF_INVERTED, default=False): cv.boolean,
-            cv.Optional(CONF_PULSE_DISTANCE_CODING, default=False): cv.boolean,
+            cv.Optional(CONF_ENCODING, default="PULSE_LENGTH"): cv.one_of(*ENCODINGS, upper=True),
         }
     ),
     cv.has_exactly_one_key(CONF_CHIPSET, CONF_BIT0_HIGH),
@@ -143,6 +161,19 @@ async def to_code(config):
                 chipset.bit1_low,
             )
         )
+        cg.add(
+            var.set_encoding(chipset.encoding)
+        )
+
+        if chipset.sync_start > 0:
+            cg.add(
+                var.set_sync_start(chipset.sync_start)
+            )
+            
+        if chipset.intermission > 0:
+            cg.add(
+                var.set_intermission(chipset.intermission)
+            )
     else:
         cg.add(
             var.set_led_params(
@@ -152,10 +183,15 @@ async def to_code(config):
                 config[CONF_BIT1_LOW],
             )
         )
+
+        if (CONF_ENCODING in config):
+            cg.add(var.set_use_pulse_distance(config[CONF_ENCODING]))
+
         if CONF_SYNC_START in config:
             cg.add(
                 var.set_sync_start(config[CONF_SYNC_START])
             )
+
         if CONF_INTERMISSION in config:
             cg.add(
                 var.set_intermission(config[CONF_INTERMISSION])
@@ -164,7 +200,8 @@ async def to_code(config):
     cg.add(var.set_rgb_order(config[CONF_RGB_ORDER]))
     cg.add(var.set_is_rgbw(config[CONF_IS_RGBW]))
     cg.add(var.set_is_inverted(config[CONF_INVERTED]))
-    cg.add(var.set_use_pulse_distance(config[CONF_PULSE_DISTANCE_CODING]))
+    if CONF_CHIPSET in config:
+        chipset = CHIPSETS[config[CONF_CHIPSET]]
 
     cg.add(
         var.set_rmt_channel(

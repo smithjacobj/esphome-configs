@@ -24,6 +24,35 @@ enum RGBOrder : uint8_t {
   ORDER_BRG,
 };
 
+// encoding types sourced from Vishay reference
+// https://www.vishay.com/docs/80071/dataform.pdf
+enum Encoding : uint8_t {
+  ENCODING_PULSE_LENGTH,
+  ENCODING_PULSE_DISTANCE,
+  ENCODING_BI_PHASE,
+};
+
+struct defaultView {
+  uint8_t colors[4];
+};
+
+struct rdsRgbw02View {
+  uint8_t ledNum : 5;
+  uint8_t colorNum : 3;
+  uint8_t colors[3];
+};
+
+enum rdsRgbw02Color : uint8_t {
+  RDS_RGBW_02_OFF = 0,
+  RDS_RGBW_02_RED,
+  RDS_RGBW_02_GREEN,
+  RDS_RGBW_02_BLUE,
+  RDS_RGBW_02_WHITE,
+  RDS_RGBW_02_PURPLE,
+  RDS_RGBW_02_YELLOW,
+  RDS_RGBW_02_CYAN,
+};
+
 class ESP32RMTLEDStripLightOutput : public light::AddressableLight {
  public:
   void setup() override;
@@ -45,7 +74,7 @@ class ESP32RMTLEDStripLightOutput : public light::AddressableLight {
   void set_num_leds(uint16_t num_leds) { this->num_leds_ = num_leds; }
   void set_is_rgbw(bool is_rgbw) { this->is_rgbw_ = is_rgbw; }
   void set_is_inverted(bool is_inverted) { this->is_inverted_ = is_inverted; }
-  void set_use_pulse_distance(bool use_pulse_distance) { this->use_pulse_distance_ = use_pulse_distance; }
+  void set_encoding(Encoding encoding) { this->encoding_ = encoding; }
 
   /// Set a maximum refresh rate in µs as some lights do not like being updated too often.
   void set_max_refresh_rate(uint32_t interval_us) { this->max_refresh_rate_ = interval_us; }
@@ -67,7 +96,10 @@ class ESP32RMTLEDStripLightOutput : public light::AddressableLight {
  protected:
   light::ESPColorView get_view_internal(int32_t index) const override;
 
-  size_t get_buffer_size_() const { return this->num_leds_ * (3 + this->is_rgbw_); }
+  size_t get_bytes_per_packet_() const { return 3 + this->is_rgbw_; }
+  size_t get_bits_per_packet_() const;
+  size_t get_buffer_size_() const { return this->num_leds_ * this->get_bytes_per_packet_(); }
+  size_t get_rmt_buffer_size_() const;
 
   uint8_t *buf_{nullptr};
   uint8_t *effect_data_{nullptr};
@@ -77,12 +109,12 @@ class ESP32RMTLEDStripLightOutput : public light::AddressableLight {
   uint16_t num_leds_;
   bool is_rgbw_;
   bool is_inverted_;
-  bool use_pulse_distance_;
 
   uint32_t sync_start_ = 0;
   uint32_t intermission_ = 0;
   rmt_item32_t bit0_, bit1_;
   RGBOrder rgb_order_;
+  Encoding encoding_ = ENCODING_PULSE_LENGTH;
   rmt_channel_t channel_;
 
   uint32_t last_refresh_{0};

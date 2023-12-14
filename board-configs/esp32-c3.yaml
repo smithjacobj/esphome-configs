@@ -1,5 +1,4 @@
 esphome:
-  name: ${DEVICE_NAME}
   platformio_options:
     board_build.flash_mode: dio
 
