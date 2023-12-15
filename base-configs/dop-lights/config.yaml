@@ -28,42 +28,17 @@ external_components:
     components: [esp32_rmt_led_strip, light]
 
 sensor:
-  - platform: adc
-    pin: ${CH0_FAULT_PIN}
+  - pin: ${CH0_FAULT_PIN}
     name: Ch0 Voltage
-    attenuation: auto
-    device_class: Voltage
-    filters:
-      - multiply: 5.6 # 10k / 2.2k voltage divider
+    <<: !include sensor_config.yaml
+  - pin: ${CH1_FAULT_PIN}
+    name: Ch1 Voltage
+    <<: !include sensor_config.yaml
 
 light:
-  - platform: esp32_rmt_led_strip
-    name: Ch0
-    chipset: RDS-RGBW-02
-    num_leds: 15
-    rgb_order: RGB
-    is_rgbw: true
-    rmt_channel: 0
+  - name: Ch0
     pin: ${CH0_PIN}
-    default_transition_length: 0s
-    restore_mode: RESTORE_DEFAULT_ON
-    effects:
-      - addressable_rainbow:
-          speed: 10
-          width: 15
-      - addressable_lambda:
-          name: Candy Cane
-          update_interval: 1h
-          lambda: static_colors(it, {RED, WHITE});
-      - addressable_lambda:
-          name: Red Green
-          update_interval: 1h
-          lambda: static_colors(it, {RED, GREEN});
-      - addressable_lambda:
-          name: Five Color
-          update_interval: 1h
-          lambda: static_colors(it, {RED, GREEN, BLUE, YELLOW, PURPLE});
-      - addressable_rainbow:
-          name: ARE GEE BEE
-          speed: 10
-          width: 150
+    <<: !include light_config.yaml
+  - name: Ch1
+    pin: ${CH1_PIN}
+    <<: !include light_config.yaml

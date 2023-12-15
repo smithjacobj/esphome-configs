@@ -1,0 +1,28 @@
+platform: esp32_rmt_led_strip
+chipset: RDS-RGBW-02
+num_leds: 15
+rgb_order: RGB
+is_rgbw: true
+rmt_channel: 0
+default_transition_length: 0s
+restore_mode: RESTORE_DEFAULT_ON
+effects:
+  - addressable_rainbow:
+      speed: 10
+      width: 15
+  - addressable_lambda:
+      name: Candy Cane
+      update_interval: 1h
+      lambda: static_colors(it, {RED, WHITE});
+  - addressable_lambda:
+      name: Red Green
+      update_interval: 1h
+      lambda: static_colors(it, {RED, GREEN});
+  - addressable_lambda:
+      name: Five Color
+      update_interval: 1h
+      lambda: static_colors(it, {RED, GREEN, BLUE, YELLOW, PURPLE});
+  - addressable_rainbow:
+      name: ARE GEE BEE
+      speed: 10
+      width: 150
