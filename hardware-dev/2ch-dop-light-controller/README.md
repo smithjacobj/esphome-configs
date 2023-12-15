@@ -3,6 +3,16 @@ created in the free and open-source [KiCad](https://kicad.org)
 
 ![an image of the PCB](pcb.png?raw=true)
 
+Known issues:
+* The solder lugs for the outputs are slightly too small for the tinned "YETOR" connectors listed
+  below. I ended up just whittling a little solder and some strands off before insertion.
+* The footprint for the fuse mounts are not accurate and require some bending. The fuse mounts used
+  are [these](https://www.amazon.com/dp/B08GSG1FNV), which hold APM/ATM/"mini-ATO" style blade
+  fuses.
+* These fuses also don't come in 2.5A, so I ended up using 2A fuses. It's unlikely you'll overdraw
+  with 3 strings per channel; 1 30-light string draws only about 600mA peak. It's more to kill power
+  if something shorts out.
+
 There is also an STL file, 7mm_cable_gland.stl, which I created and printed in a urethane resin to
 create water-resistant fittings for the project box for the
 ["YETOR Waterproof Connectors 2 Wire"](https://www.amazon.com/dp/B07WDBLFDN) and power cord to enter
