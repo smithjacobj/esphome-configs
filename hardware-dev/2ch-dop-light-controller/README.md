@@ -12,6 +12,9 @@ Known issues:
 * These fuses also don't come in 2.5A, so I ended up using 2A fuses. It's unlikely you'll overdraw
   with 3 strings per channel; 1 30-light string draws only about 600mA peak. It's more to kill power
   if something shorts out.
+* The current design has no reverse polarity protection. Check and check again!
+* The "YETOR" connector wire colors are opposite the polarity for the light strings I connected, so do your due diligence on determining polarity there as well. 
+
 
 There is also an STL file, 7mm_cable_gland.stl, which I created and printed in a urethane resin to
 create water-resistant fittings for the project box for the
