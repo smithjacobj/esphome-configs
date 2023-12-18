@@ -29,16 +29,29 @@ external_components:
 
 sensor:
   - pin: ${CH0_FAULT_PIN}
-    name: Ch0 Voltage
-    <<: !include sensor_config.yaml
+    name: ${DEVICE_NAME} Ch0 Voltage
+    <<: !include
+      file: sensor_config.yaml
+      vars:
+        REAL_VOLTS: 5.2
+        REPORTED_VOLTS: ${CH0_REPORTED_VOLTS}
   - pin: ${CH1_FAULT_PIN}
-    name: Ch1 Voltage
+    name: ${DEVICE_NAME} Ch1 Voltage
+    <<: !include
+      file: sensor_config.yaml
+      vars:
+        REAL_VOLTS: 5.2
+        REPORTED_VOLTS: ${CH1_REPORTED_VOLTS}
     <<: !include sensor_config.yaml
+  - platform: wifi_signal
+    name: ${DEVICE_NAME} WiFi Signal
 
 light:
-  - name: Ch0
+  - name: ${DEVICE_NAME} Ch0
     pin: ${CH0_PIN}
+    rmt_channel: 0
     <<: !include light_config.yaml
-  - name: Ch1
+  - name: ${DEVICE_NAME} Ch1
     pin: ${CH1_PIN}
+    rmt_channel: 1
     <<: !include light_config.yaml

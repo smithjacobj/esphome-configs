@@ -3,3 +3,5 @@
   vars:
     LOG_LEVEL: DEBUG
     DEVICE_NAME: holiday-lights-02
+    CH0_REPORTED_VOLTS: 0.92068
+    CH1_REPORTED_VOLTS: 0.91829

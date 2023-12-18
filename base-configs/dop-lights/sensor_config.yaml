@@ -2,4 +2,4 @@ platform: adc
 attenuation: auto
 device_class: Voltage
 filters:
-  - multiply: 5.6 # 10k / 2.2k voltage divider
+  - lambda: return x * ${REAL_VOLTS} / ${REPORTED_VOLTS};

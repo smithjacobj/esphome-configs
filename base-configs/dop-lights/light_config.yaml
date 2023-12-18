@@ -3,7 +3,6 @@ chipset: RDS-RGBW-02
 num_leds: 15
 rgb_order: RGB
 is_rgbw: true
-rmt_channel: 0
 default_transition_length: 0s
 restore_mode: RESTORE_DEFAULT_ON
 effects:
