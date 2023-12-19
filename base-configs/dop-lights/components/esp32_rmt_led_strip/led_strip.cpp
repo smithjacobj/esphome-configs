@@ -1,5 +1,6 @@
 #include <cinttypes>
 #include "led_strip.h"
+#include "rds_rgbw_02.h"
 
 #ifdef USE_ESP32
 
@@ -15,35 +16,6 @@ static const char *const TAG = "esp32_rmt_led_strip";
 
 static constexpr uint8_t RMT_CLK_DIV = 2;
 static constexpr float CLK_RATIO = (float) APB_CLK_FREQ / RMT_CLK_DIV / 1e09f;
-
-static bool is_whitish(const uint8_t red, const uint8_t green, const uint8_t blue)
-{
-  static constexpr float THRESHOLD = .1f;
-  const float red_f = red;
-  const float green_f = green;
-  const float blue_f = blue;
-  const float average = (red_f + blue_f + green_f) / 3;
-  const float red_pct_delta = std::abs(red/average - 1.f);
-  const float green_pct_delta = std::abs(green/average - 1.f);
-  const float blue_pct_delta = std::abs(blue/average - 1.f);
-  return red_pct_delta < THRESHOLD && green_pct_delta < THRESHOLD && blue_pct_delta < THRESHOLD;
-}
-
-static uint8_t get_rds_rgbw_02_color(uint8_t *color_buf) {
-  const uint8_t red = color_buf[0];
-  const uint8_t green = color_buf[1];
-  const uint8_t blue = color_buf[2];
-  ESP_LOGD(TAG, "red: %d, green: %d, blue: %d", red, green, blue);
-  if (is_whitish(red, green, blue))
-    return RDS_RGBW_02_WHITE;
-  if (red >= green && blue >= green)
-    return RDS_RGBW_02_PURPLE;
-  if (red >= blue && green >= blue)
-    return RDS_RGBW_02_YELLOW;
-  if (green >= red && blue >= red)
-    return RDS_RGBW_02_CYAN;
-  return RDS_RGBW_02_RED;
-}
 
 void ESP32RMTLEDStripLightOutput::setup() {
   ESP_LOGCONFIG(TAG, "Setting up ESP32 LED Strip...");
@@ -114,8 +86,9 @@ void ESP32RMTLEDStripLightOutput::set_sync_start(uint32_t sync_start) {
   this->sync_start_ = (uint32_t) (CLK_RATIO * sync_start);
 }
 
-void ESP32RMTLEDStripLightOutput::set_intermission(uint32_t intermission) {
-  this->intermission_ = intermission;
+void ESP32RMTLEDStripLightOutput::set_rmt_view(RMTView *rmt_view) {
+  this->rmt_view_.reset(rmt_view);
+  this->rmt_view_->set_light(this);
 }
 
 void ESP32RMTLEDStripLightOutput::write_state(light::LightState *state) {
@@ -138,79 +111,39 @@ void ESP32RMTLEDStripLightOutput::write_state(light::LightState *state) {
   }
   delayMicroseconds(50);
 
-  size_t buffer_size = this->get_buffer_size_();
+  int len = 0;
+  uint8_t *src = this->buf_;
+  rmt_item32_t *dest = this->rmt_buf_;
+  for (size_t i = 0; i < this->num_leds_; i++) {
+    int command_len = this->rmt_view_->generate_rmt_items(i, src, dest, state);
+    src += this->get_bytes_per_led_();
+    dest += command_len;
+    len += command_len;
 
-  size_t size = 0;
-  size_t len = 0;
-  uint8_t *psrc = this->buf_;
-  rmt_item32_t *pdest = this->rmt_buf_;
-  // while (size < buffer_size) {
-  //   uint8_t b = *psrc;
-  //   for (int i = 0; i < 8; i++) {
-  //     pdest->val = b & (1 << (7 - i)) ? this->bit1_.val : this->bit0_.val;
-  //     pdest++;
-  //     len++;
-  //   }
-  //   size++;
-  //   psrc++;
-  // }
-
-  // 1-bit addressing
-  for (int addr = 0; addr < this->num_leds_; addr++) {
-    len = 0;
-    // psrc = this->buf_;
-    pdest = this->rmt_buf_;
-
-    for (int i = 0; i < 4; i++) {
-      pdest->val = ((addr + 1) >> (3 - i)) & 1 ? this->bit1_.val : this->bit0_.val;
-      // pdest->val = this->bit0_.val;
-      if (this->sync_start_ > 0 && i == 0) {
-        pdest->duration0 = this->sync_start_;
-      }
-      pdest++;
-      len++;
-    }
-    
-    uint8_t color = get_rds_rgbw_02_color(psrc);
-    for (int i = 0; i < 4; i++) {
-      pdest->val = (color >> (3 - i)) & 1 ? this->bit1_.val : this->bit0_.val;
-      pdest++;
-      len++;
-    }
-
-    for (int color = 0; color < 3; color++) {
-      uint8_t b = *psrc;
-      for (int i = 0; i < 8; i++) {
-        pdest->val = b & (1 << (7 - i)) ? this->bit1_.val : this->bit0_.val;
-        pdest++;
-        len++;
-      }
-      psrc++;
-    }
-    if (this->is_rgbw_) psrc++;
-
+    // Pulse distance requires a final pulse to bookend the last distance.
     if (this->encoding_ == ENCODING_PULSE_DISTANCE) {
-      // if we're using pulse distance, we need a final high state to bookend the last distance.
-      pdest->val = this->bit0_.val;
-      pdest++;
+      dest->val = this->bit0_.val;
+      dest++;
+      command_len++;
       len++;
     }
 
-    assert(len <= this->get_rmt_buffer_size_());
-    for (int i = 0; i < len; i++) {
-      const rmt_item32_t item = this->rmt_buf_[i];
-      ESP_LOGVV(TAG, "RMT%03dHi: %fus", i, ((float)item.duration0) / CLK_RATIO / 1000.f);
-      ESP_LOGVV(TAG, "RMT%03dLo: %fus", i, ((float)item.duration1) / CLK_RATIO / 1000.f);
+    if (this->intermission_ > 0) {
+      if (rmt_write_items(this->channel_, this->rmt_buf_, command_len, true) != ESP_OK) {
+        ESP_LOGE(TAG, "RMT TX error");
+        this->status_set_warning();
+        return;
+      }
+      dest = this->rmt_buf_;
+      delayMicroseconds(this->intermission_);
     }
+  }
 
+  if (this->intermission_ == 0) {
     if (rmt_write_items(this->channel_, this->rmt_buf_, len, true) != ESP_OK) {
       ESP_LOGE(TAG, "RMT TX error");
       this->status_set_warning();
       return;
-    }
-
-    if (this->intermission_ > 0) {
-      delayMicroseconds(this->intermission_);
     }
   }
 
@@ -289,9 +222,46 @@ void ESP32RMTLEDStripLightOutput::dump_config() {
       break;
   }
   ESP_LOGCONFIG(TAG, "  RGB Order: %s", rgb_order);
+  ESP_LOGCONFIG(TAG, "  ColorModes:");
+  for (const light::ColorMode mode : this->supported_color_modes_) {
+    const char *mode_string = "UNKNOWN";
+    switch (mode) {
+      case light::ColorMode::ON_OFF:
+        mode_string = "ON_OFF";
+        break;
+      case light::ColorMode::BRIGHTNESS:
+        mode_string = "BRIGHTNESS";
+        break;
+      case light::ColorMode::WHITE:
+        mode_string = "WHITE";
+        break;
+      case light::ColorMode::COLOR_TEMPERATURE:
+        mode_string = "COLOR_TEMPERATURE";
+        break;
+      case light::ColorMode::COLD_WARM_WHITE:
+        mode_string = "COLD_WARM_WHITE";
+        break;
+      case light::ColorMode::RGB:
+        mode_string = "RGB";
+        break;
+      case light::ColorMode::RGB_WHITE:
+        mode_string = "RGB_WHITE";
+        break;
+      case light::ColorMode::RGB_COLOR_TEMPERATURE:
+        mode_string = "RGB_COLOR_TEMPERATURE";
+        break;
+      case light::ColorMode::RGB_COLD_WARM_WHITE:
+        mode_string = "RGB_COLD_WARM_WHITE";
+        break;
+      default:
+        mode_string = "UNKNOWN";
+        break;
+    }
+    ESP_LOGCONFIG(TAG, "    %s", mode_string);
+  }
   ESP_LOGCONFIG(TAG, "  Max refresh rate: %" PRIu32, *this->max_refresh_rate_);
   ESP_LOGCONFIG(TAG, "  Number of LEDs: %u", this->num_leds_);
-  const char* encoding = "UNKNOWN";
+  const char *encoding = "UNKNOWN";
   switch (this->encoding_) {
     case ENCODING_PULSE_LENGTH:
       encoding = "PULSE_LENGTH";
@@ -308,16 +278,45 @@ void ESP32RMTLEDStripLightOutput::dump_config() {
 
 float ESP32RMTLEDStripLightOutput::get_setup_priority() const { return setup_priority::HARDWARE; }
 
-size_t ESP32RMTLEDStripLightOutput::get_bits_per_packet_() const {
-  const size_t bits = this->get_bytes_per_packet_() * 8;
+light::LightTraits ESP32RMTLEDStripLightOutput::get_traits() {
+  auto traits = light::LightTraits();
+  traits.set_supported_color_modes(this->supported_color_modes_);
+  return traits;
+}
+
+size_t ESP32RMTLEDStripLightOutput::get_bits_per_command_() const {
+  const size_t bits = this->bits_per_command_ > 0 ? this->bits_per_command_ : this->get_bytes_per_led_() * 8;
   if (this->encoding_ == ENCODING_PULSE_DISTANCE) {
-    return bits + 1; // an extra bit is needed to "bookend" the last distance.
+    return bits + 1;  // an extra bit is needed to "bookend" the last distance.
   }
   return bits;
 }
 
 size_t ESP32RMTLEDStripLightOutput::get_rmt_buffer_size_() const {
-  return this->num_leds_ * this->get_bits_per_packet_();
+  return this->num_leds_ * this->get_bits_per_command_();
+}
+
+void ESP32RMTLEDStripLightOutput::set_supported_color_modes(const std::set<esphome::light::ColorMode> &color_modes) {
+  this->supported_color_modes_ = color_modes;
+  if (color_modes.find(light::ColorMode::RGB_WHITE) != color_modes.cend()) {
+    this->is_rgbw_ = true;
+  }
+}
+
+int DefaultRMTView::generate_rmt_items(const int index, const uint8_t *src, rmt_item32_t *dest, light::LightState *state) {
+  assert(this->light_);
+  int len = 0;
+
+  const int color_count = 3 + this->light_->get_is_rgbw();
+  for (int i = 0; i < color_count; i++) {
+    const uint8_t color = src[i];
+    for (int j = 7; j >= 0; j--) {
+      dest->val = (color >> j) & 1 ? this->light_->get_bit1().val : this->light_->get_bit0().val;
+      dest++;
+      len++;
+    }
+  }
+  return len;
 }
 
 }  // namespace esp32_rmt_led_strip

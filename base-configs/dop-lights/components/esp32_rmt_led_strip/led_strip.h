@@ -15,6 +15,8 @@
 namespace esphome {
 namespace esp32_rmt_led_strip {
 
+class ESP32RMTLEDStripLightOutput;
+
 enum RGBOrder : uint8_t {
   ORDER_RGB,
   ORDER_RBG,
@@ -32,25 +34,27 @@ enum Encoding : uint8_t {
   ENCODING_BI_PHASE,
 };
 
-struct defaultView {
-  uint8_t colors[4];
+class RMTView {
+ public:
+  void set_light(const ESP32RMTLEDStripLightOutput *light) { this->light_ = light; }
+  virtual int generate_rmt_items(const int index, const uint8_t *src, rmt_item32_t *item_dest,
+                              light::LightState *state) = 0;
+
+ protected:
+  rmt_item32_t bit0_, bit1_;
+  uint32_t sync_start_;
+  Encoding encoding_ = ENCODING_PULSE_LENGTH;
+  const ESP32RMTLEDStripLightOutput *light_;
 };
 
-struct rdsRgbw02View {
-  uint8_t ledNum : 5;
-  uint8_t colorNum : 3;
-  uint8_t colors[3];
-};
+class DefaultRMTView final : public RMTView {
+ public:
+  int generate_rmt_items(const int index, const uint8_t *src, rmt_item32_t *item_dest, light::LightState *state) override;
 
-enum rdsRgbw02Color : uint8_t {
-  RDS_RGBW_02_OFF = 0,
-  RDS_RGBW_02_RED,
-  RDS_RGBW_02_GREEN,
-  RDS_RGBW_02_BLUE,
-  RDS_RGBW_02_WHITE,
-  RDS_RGBW_02_PURPLE,
-  RDS_RGBW_02_YELLOW,
-  RDS_RGBW_02_CYAN,
+ private:
+  struct map {
+    uint8_t rgbw[4];
+  };
 };
 
 class ESP32RMTLEDStripLightOutput : public light::AddressableLight {
@@ -60,31 +64,41 @@ class ESP32RMTLEDStripLightOutput : public light::AddressableLight {
   float get_setup_priority() const override;
 
   int32_t size() const override { return this->num_leds_; }
-  light::LightTraits get_traits() override {
-    auto traits = light::LightTraits();
-    if (this->is_rgbw_) {
-      traits.set_supported_color_modes({light::ColorMode::RGB_WHITE, light::ColorMode::WHITE});
-    } else {
-      traits.set_supported_color_modes({light::ColorMode::RGB});
-    }
-    return traits;
-  }
+  light::LightTraits get_traits() override;
 
   void set_pin(uint8_t pin) { this->pin_ = pin; }
   void set_num_leds(uint16_t num_leds) { this->num_leds_ = num_leds; }
-  void set_is_rgbw(bool is_rgbw) { this->is_rgbw_ = is_rgbw; }
+  bool get_is_rgbw() const { return this->is_rgbw_; }
+  void set_is_rgbw(bool is_rgbw) {
+    if (is_rgbw) {
+      this->set_supported_color_modes({light::ColorMode::RGB_WHITE, light::ColorMode::WHITE});
+    } else {
+      this->set_supported_color_modes({light::ColorMode::RGB});
+    }
+  }
+  // used to set rgbw backing buffer without exposing the "RGB_WHITE" mode trait to HA
+  void set_internal_is_rgbw(bool is_rgbw) { this->is_rgbw_ = is_rgbw; }
+  void set_supported_color_modes(const std::set<esphome::light::ColorMode> &color_modes);
   void set_is_inverted(bool is_inverted) { this->is_inverted_ = is_inverted; }
+  Encoding get_encoding() const { return this->encoding_; }
   void set_encoding(Encoding encoding) { this->encoding_ = encoding; }
 
   /// Set a maximum refresh rate in µs as some lights do not like being updated too often.
   void set_max_refresh_rate(uint32_t interval_us) { this->max_refresh_rate_ = interval_us; }
 
+  const rmt_item32_t &get_bit0() const { return this->bit0_; }
+  const rmt_item32_t &get_bit1() const { return this->bit1_; }
   void set_led_params(uint32_t bit0_high, uint32_t bit0_low, uint32_t bit1_high, uint32_t bit1_low);
+  uint32_t get_sync_start() const { return this->sync_start_; }
   void set_sync_start(uint32_t sync_start);
-  void set_intermission(uint32_t intermission);
+  void set_intermission(uint32_t intermission) { this->intermission_ = intermission; }
 
+  RGBOrder get_rgb_order() const { return this->rgb_order_; }
   void set_rgb_order(RGBOrder rgb_order) { this->rgb_order_ = rgb_order; }
+  void set_rmt_view(RMTView *rmt_view);
   void set_rmt_channel(rmt_channel_t channel) { this->channel_ = channel; }
+
+  void set_bits_per_command(uint32_t bits) { this->bits_per_command_ = bits; }
 
   void clear_effect_data() override {
     for (int i = 0; i < this->size(); i++)
@@ -96,9 +110,9 @@ class ESP32RMTLEDStripLightOutput : public light::AddressableLight {
  protected:
   light::ESPColorView get_view_internal(int32_t index) const override;
 
-  size_t get_bytes_per_packet_() const { return 3 + this->is_rgbw_; }
-  size_t get_bits_per_packet_() const;
-  size_t get_buffer_size_() const { return this->num_leds_ * this->get_bytes_per_packet_(); }
+  size_t get_bytes_per_led_() const { return 3 + this->is_rgbw_; }
+  size_t get_bits_per_command_() const;
+  size_t get_buffer_size_() const { return this->num_leds_ * this->get_bytes_per_led_(); }
   size_t get_rmt_buffer_size_() const;
 
   uint8_t *buf_{nullptr};
@@ -108,6 +122,7 @@ class ESP32RMTLEDStripLightOutput : public light::AddressableLight {
   uint8_t pin_;
   uint16_t num_leds_;
   bool is_rgbw_;
+  std::set<light::ColorMode> supported_color_modes_;
   bool is_inverted_;
 
   uint32_t sync_start_ = 0;
@@ -115,7 +130,10 @@ class ESP32RMTLEDStripLightOutput : public light::AddressableLight {
   rmt_item32_t bit0_, bit1_;
   RGBOrder rgb_order_;
   Encoding encoding_ = ENCODING_PULSE_LENGTH;
+  std::unique_ptr<RMTView> rmt_view_;
   rmt_channel_t channel_;
+
+  uint32_t bits_per_command_ = 0;
 
   uint32_t last_refresh_{0};
   optional<uint32_t> max_refresh_rate_{};
