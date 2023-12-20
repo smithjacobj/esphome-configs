@@ -151,8 +151,8 @@ CONFIG_SCHEMA = cv.All(
                 "custom",
             ): cv.positive_time_period_nanoseconds,
             cv.Optional(CONF_INVERTED, default=False): cv.boolean,
-            cv.Optional(CONF_ENCODING, default="PULSE_LENGTH"): cv.one_of(
-                *ENCODINGS, upper=True
+            cv.Optional(CONF_ENCODING, default="PULSE_LENGTH"): cv.enum(
+                ENCODINGS, upper=True
             ),
         }
     ),
@@ -218,7 +218,7 @@ async def to_code(config):
         )
 
         if CONF_ENCODING in config:
-            cg.add(var.set_use_pulse_distance(config[CONF_ENCODING]))
+            cg.add(var.set_encoding(config[CONF_ENCODING]))
 
         if CONF_SYNC_START in config:
             cg.add(var.set_sync_start(config[CONF_SYNC_START]))

@@ -303,7 +303,8 @@ void ESP32RMTLEDStripLightOutput::set_supported_color_modes(const std::set<espho
   }
 }
 
-int DefaultRMTView::generate_rmt_items(const int index, const uint8_t *src, rmt_item32_t *dest, light::LightState *state) {
+int DefaultRMTView::generate_rmt_items(const int index, const uint8_t *src, rmt_item32_t *dest,
+                                       light::LightState *state) {
   assert(this->light_);
   int len = 0;
 

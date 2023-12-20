@@ -24,7 +24,7 @@ enum RDSRGBW02Color : uint8_t {
 
 class RDSRGBW02RMTView final : public RMTView {
  public:
-  int generate_rmt_items(const int index, const uint8_t *src, rmt_item32_t *dest, light::LightState *state) override;
+  int generate_rmt_items(int index, const uint8_t *src, rmt_item32_t *dest, light::LightState *state) override;
 };
 
 };  // namespace esp32_rmt_led_strip

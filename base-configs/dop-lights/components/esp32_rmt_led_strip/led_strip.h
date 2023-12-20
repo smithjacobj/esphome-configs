@@ -37,8 +37,7 @@ enum Encoding : uint8_t {
 class RMTView {
  public:
   void set_light(const ESP32RMTLEDStripLightOutput *light) { this->light_ = light; }
-  virtual int generate_rmt_items(const int index, const uint8_t *src, rmt_item32_t *item_dest,
-                              light::LightState *state) = 0;
+  virtual int generate_rmt_items(int index, const uint8_t *src, rmt_item32_t *item_dest, light::LightState *state) = 0;
 
  protected:
   rmt_item32_t bit0_, bit1_;
@@ -49,12 +48,7 @@ class RMTView {
 
 class DefaultRMTView final : public RMTView {
  public:
-  int generate_rmt_items(const int index, const uint8_t *src, rmt_item32_t *item_dest, light::LightState *state) override;
-
- private:
-  struct map {
-    uint8_t rgbw[4];
-  };
+  int generate_rmt_items(int index, const uint8_t *src, rmt_item32_t *item_dest, light::LightState *state) override;
 };
 
 class ESP32RMTLEDStripLightOutput : public light::AddressableLight {

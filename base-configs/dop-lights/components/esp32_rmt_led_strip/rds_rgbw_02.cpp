@@ -23,15 +23,15 @@ RDSRGBW02Color get_rds_rgbw_02_color(const uint8_t *color_buf) {
     return RDS_RGBW_02_YELLOW;
   if (green >= red && blue >= red)
     return RDS_RGBW_02_CYAN;
-  assert(true);  // this should be unreachable
+  ESP_LOGE(TAG, "this should be unreachable");
   return RDS_RGBW_02_RED;
 }
 
 int RDSRGBW02RMTView::generate_rmt_items(const int index, const uint8_t *src, rmt_item32_t *dest,
                                          light::LightState *state) {
   const light::LightColorValues &values{state->current_values};
-  const bool is_white =
-      values.get_color_mode() == light::ColorMode::WHITE || src[3] > std::max(std::max(src[0], src[1]), src[2]);
+  const bool is_white = (values.get_color_mode() == light::ColorMode::WHITE && !this->light_->is_effect_active()) ||
+                        src[3] > std::max(std::max(src[0], src[1]), src[2]);
   const rmt_item32_t &bit0{this->light_->get_bit0()};
   const rmt_item32_t &bit1{this->light_->get_bit1()};
   int len = 0;
@@ -48,7 +48,7 @@ int RDSRGBW02RMTView::generate_rmt_items(const int index, const uint8_t *src, rm
   }
 
   // color enum (4 bits)
-  RDSRGBW02Color color = RDS_RGBW_02_WHITE;
+  RDSRGBW02Color color = values.get_state() > 0.f ? RDS_RGBW_02_WHITE : RDS_RGBW_02_OFF;
   if (!is_white) {
     color = get_rds_rgbw_02_color(src);
   }
