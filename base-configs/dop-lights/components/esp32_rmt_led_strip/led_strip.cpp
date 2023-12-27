@@ -24,8 +24,11 @@ void ESP32RMTLEDStripLightOutput::setup() {
 
   ExternalRAMAllocator<uint8_t> allocator(ExternalRAMAllocator<uint8_t>::ALLOW_FAILURE);
   this->buf_[0] = allocator.allocate(buffer_size);
-  this->buf_[1] = allocator.allocate(buffer_size);
-  if (this->buf_[0] == nullptr || this->buf_[1] == nullptr) {
+  if (this->allow_partial_updates_) {
+    // allocate a second buffer for swap->delta comparison
+    this->buf_[1] = allocator.allocate(buffer_size);
+  }
+  if (this->buf_[0] == nullptr || (this->allow_partial_updates_ && this->buf_[1] == nullptr)) {
     ESP_LOGE(TAG, "Cannot allocate LED buffer!");
     this->mark_failed();
     return;
@@ -116,8 +119,7 @@ void ESP32RMTLEDStripLightOutput::write_state(light::LightState *state) {
   uint8_t *src = this->get_current_buf_();
   rmt_item32_t *dest = this->rmt_buf_;
   for (size_t i = 0; i < this->num_leds_; i++) {
-    // @todo: make this optional because it will break chipsets that need updates in order
-    if (this->bufs_same_at_index_(i)) {
+    if (this->allow_partial_updates_ && this->bufs_same_at_index_(i)) {
       src += this->get_bytes_per_led_();
       continue;
     }
@@ -312,6 +314,9 @@ void ESP32RMTLEDStripLightOutput::set_supported_color_modes(const std::set<espho
 }
 
 bool ESP32RMTLEDStripLightOutput::bufs_same_at_index_(const int i) const {
+  assert(this->allow_partial_updates_);
+  assert(this->buf_[1]);
+
   const int bpc = this->get_bytes_per_led_();
   const uint8_t *buf0 = this->buf_[0];
   const uint8_t *buf1 = this->buf_[1];

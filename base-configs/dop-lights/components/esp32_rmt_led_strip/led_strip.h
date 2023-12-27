@@ -76,6 +76,7 @@ class ESP32RMTLEDStripLightOutput : public light::AddressableLight {
   void set_is_inverted(bool is_inverted) { this->is_inverted_ = is_inverted; }
   Encoding get_encoding() const { return this->encoding_; }
   void set_encoding(Encoding encoding) { this->encoding_ = encoding; }
+  void set_allow_partial_updates(bool allow) { this->allow_partial_updates_ = allow; }
 
   /// Set a maximum refresh rate in µs as some lights do not like being updated too often.
   void set_max_refresh_rate(uint32_t interval_us) { this->max_refresh_rate_ = interval_us; }
@@ -111,7 +112,10 @@ class ESP32RMTLEDStripLightOutput : public light::AddressableLight {
 
   uint8_t *get_current_buf_() const { return buf_[this->current_buf_]; }
   uint8_t *get_old_buf_() const { return buf_[!this->current_buf_]; }
-  void swap_buf_() { this->current_buf_ = !this->current_buf_; }
+  void swap_buf_() {
+    if (this->allow_partial_updates_)
+      this->current_buf_ = !this->current_buf_;
+  }
   bool bufs_same_at_index_(int i) const;
 
   // uint8_t *buf_{nullptr};
@@ -125,6 +129,7 @@ class ESP32RMTLEDStripLightOutput : public light::AddressableLight {
   bool is_rgbw_;
   std::set<light::ColorMode> supported_color_modes_;
   bool is_inverted_;
+  bool allow_partial_updates_;
 
   uint32_t sync_start_ = 0;
   uint32_t intermission_ = 0;

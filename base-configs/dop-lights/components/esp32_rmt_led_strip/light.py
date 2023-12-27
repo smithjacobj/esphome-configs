@@ -60,6 +60,7 @@ class LEDStripChipConfigs:
     intermission: int = 0
     bits_per_command: int = 0
     color_modes: list[ColorMode] = field(default_factory=lambda: [ColorMode.RGB])
+    allow_partial_updates: bool = False
     internal_is_rgbw: bool = False
 
 
@@ -79,6 +80,7 @@ CHIPSETS = {
         intermission=5_000,
         bits_per_command=32,
         color_modes=[ColorMode.RGB, ColorMode.WHITE],
+        allow_partial_updates=True,
         internal_is_rgbw=True,
     ),
 }
@@ -95,6 +97,7 @@ CONF_BIT1_HIGH = "bit1_high"
 CONF_BIT1_LOW = "bit1_low"
 CONF_RMT_CHANNEL = "rmt_channel"
 CONF_RMT_MAPPING = "rmt_mapping"
+CONF_ALLOW_PARTIAL_UPDATES = "allow_partial_updates"
 
 RMT_CHANNELS = {
     esp32.const.VARIANT_ESP32: [0, 1, 2, 3, 4, 5, 6, 7],
@@ -129,6 +132,7 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_MAX_REFRESH_RATE): cv.positive_time_period_microseconds,
             cv.Optional(CONF_CHIPSET): cv.one_of(*CHIPSETS, upper=True),
             cv.Optional(CONF_IS_RGBW): cv.boolean,
+            cv.Optional(CONF_ALLOW_PARTIAL_UPDATES): cv.boolean,
             cv.Optional(CONF_SUPPORTED_COLOR_MODES): cv.ensure_list(
                 cv.enum(COLOR_MODES, upper=True)
             ),
@@ -186,6 +190,7 @@ async def to_code(config):
             )
         )
         cg.add(var.set_encoding(chipset.encoding))
+        cg.add(var.set_allow_partial_updates(chipset.allow_partial_updates))
 
         if chipset.sync_start > 0:
             cg.add(var.set_sync_start(chipset.sync_start))
@@ -216,6 +221,9 @@ async def to_code(config):
                 config[CONF_BIT1_LOW],
             )
         )
+
+        if CONF_ALLOW_PARTIAL_UPDATES in config:
+            cg.add(var.set_allow_partial_updates(config[CONF_ALLOW_PARTIAL_UPDATES]))
 
         if CONF_ENCODING in config:
             cg.add(var.set_encoding(config[CONF_ENCODING]))

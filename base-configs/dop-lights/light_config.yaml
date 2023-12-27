@@ -6,9 +6,9 @@ default_transition_length: 0s
 restore_mode: RESTORE_DEFAULT_ON
 effects:
   - addressable_lambda:
-      name: Glimmer
+      name: Shimmer
       update_interval: 100ms
-      lambda: glimmer(reinterpret_cast<int>(&it), it, current_color);
+      lambda: shimmer(it, current_color);
   - addressable_rainbow:
       speed: 10
       width: 15

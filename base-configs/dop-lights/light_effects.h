@@ -22,13 +22,15 @@ void static_colors(AddressableLight &it, std::vector<Color> colors) {
 namespace {
   std::random_device rd;
   std::minstd_rand gen{rd()};
-  std::uniform_int_distribution<uint32_t> delay_generator{500, 5000};
+  std::uniform_int_distribution<uint32_t> delay_generator{200, 2000};
   std::uniform_int_distribution<uint32_t> light_selector{};
 
   std::unordered_map<int, uint32_t> delay_map{};
 }
 
-void glimmer(const int id, AddressableLight &it, const Color& current_color) {
+void shimmer(AddressableLight &it, const Color& current_color) {
+  const int id = reinterpret_cast<int>(&it);
+  
   for (int i = 0; i < it.size(); i++) {
     it[i] = current_color;
   }
