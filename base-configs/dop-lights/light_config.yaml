@@ -5,6 +5,10 @@ rgb_order: RGB
 default_transition_length: 0s
 restore_mode: RESTORE_DEFAULT_ON
 effects:
+  - addressable_lambda:
+      name: Glimmer
+      update_interval: 50ms
+      lambda: glimmer(reinterpret_cast<int>(&it), it, current_color);
   - addressable_rainbow:
       speed: 10
       width: 15
