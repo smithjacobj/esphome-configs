@@ -109,7 +109,14 @@ class ESP32RMTLEDStripLightOutput : public light::AddressableLight {
   size_t get_buffer_size_() const { return this->num_leds_ * this->get_bytes_per_led_(); }
   size_t get_rmt_buffer_size_() const;
 
-  uint8_t *buf_{nullptr};
+  uint8_t *get_current_buf_() const { return buf_[this->current_buf_]; }
+  uint8_t *get_old_buf_() const { return buf_[!this->current_buf_]; }
+  void swap_buf_() { this->current_buf_ = !this->current_buf_; }
+  bool bufs_same_at_index_(int i) const;
+
+  // uint8_t *buf_{nullptr};
+  uint8_t *buf_[2];
+  int current_buf_ = 0;
   uint8_t *effect_data_{nullptr};
   rmt_item32_t *rmt_buf_{nullptr};
 

@@ -23,8 +23,9 @@ void ESP32RMTLEDStripLightOutput::setup() {
   size_t buffer_size = this->get_buffer_size_();
 
   ExternalRAMAllocator<uint8_t> allocator(ExternalRAMAllocator<uint8_t>::ALLOW_FAILURE);
-  this->buf_ = allocator.allocate(buffer_size);
-  if (this->buf_ == nullptr) {
+  this->buf_[0] = allocator.allocate(buffer_size);
+  this->buf_[1] = allocator.allocate(buffer_size);
+  if (this->buf_[0] == nullptr || this->buf_[1] == nullptr) {
     ESP_LOGE(TAG, "Cannot allocate LED buffer!");
     this->mark_failed();
     return;
@@ -112,9 +113,15 @@ void ESP32RMTLEDStripLightOutput::write_state(light::LightState *state) {
   delayMicroseconds(50);
 
   int len = 0;
-  uint8_t *src = this->buf_;
+  uint8_t *src = this->get_current_buf_();
   rmt_item32_t *dest = this->rmt_buf_;
   for (size_t i = 0; i < this->num_leds_; i++) {
+    // @todo: make this optional because it will break chipsets that need updates in order
+    if (this->bufs_same_at_index_(i)) {
+      src += this->get_bytes_per_led_();
+      continue;
+    }
+
     int command_len = this->rmt_view_->generate_rmt_items(i, src, dest, state);
     src += this->get_bytes_per_led_();
     dest += command_len;
@@ -148,6 +155,7 @@ void ESP32RMTLEDStripLightOutput::write_state(light::LightState *state) {
   }
 
   this->status_clear_warning();
+  this->swap_buf_();
 }
 
 light::ESPColorView ESP32RMTLEDStripLightOutput::get_view_internal(int32_t index) const {
@@ -185,10 +193,10 @@ light::ESPColorView ESP32RMTLEDStripLightOutput::get_view_internal(int32_t index
       break;
   }
   uint8_t multiplier = this->is_rgbw_ ? 4 : 3;
-  return {this->buf_ + (index * multiplier) + r,
-          this->buf_ + (index * multiplier) + g,
-          this->buf_ + (index * multiplier) + b,
-          this->is_rgbw_ ? this->buf_ + (index * multiplier) + 3 : nullptr,
+  return {this->get_current_buf_() + (index * multiplier) + r,
+          this->get_current_buf_() + (index * multiplier) + g,
+          this->get_current_buf_() + (index * multiplier) + b,
+          this->is_rgbw_ ? this->get_current_buf_() + (index * multiplier) + 3 : nullptr,
           &this->effect_data_[index],
           &this->correction_};
 }
@@ -301,6 +309,14 @@ void ESP32RMTLEDStripLightOutput::set_supported_color_modes(const std::set<espho
   if (color_modes.find(light::ColorMode::RGB_WHITE) != color_modes.cend()) {
     this->is_rgbw_ = true;
   }
+}
+
+bool ESP32RMTLEDStripLightOutput::bufs_same_at_index_(const int i) const {
+  const int bpc = this->get_bytes_per_led_();
+  const uint8_t *buf0 = this->buf_[0];
+  const uint8_t *buf1 = this->buf_[1];
+  return buf0[i * bpc] == buf1[i * bpc] && buf0[i * bpc + 1] == buf1[i * bpc + 1] &&
+         buf0[i * bpc + 2] == buf1[i * bpc + 2] && (!this->is_rgbw_ || buf0[i * bpc + 3] == buf1[i * bpc + 3]);
 }
 
 int DefaultRMTView::generate_rmt_items(const int index, const uint8_t *src, rmt_item32_t *dest,
