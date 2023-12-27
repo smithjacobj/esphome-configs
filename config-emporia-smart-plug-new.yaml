@@ -1,0 +1,9 @@
+# create a new config with the mac name after initialization.
+substitutions:
+  DEVICE_NAME: emporia-smart-plug
+  
+esphome:
+  name_add_mac_suffix: true
+
+packages:
+  emporia_plug_us: !include base-configs/emporia-smart-plug/esphome.yaml

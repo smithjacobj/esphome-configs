@@ -1,6 +1,7 @@
 # Basic Config
 esphome:
   name: ${DEVICE_NAME}
+  name_add_mac_suffix: false
   platform: ESP8266
   board: esp01_1m
 
