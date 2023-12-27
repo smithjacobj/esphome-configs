@@ -34,22 +34,8 @@ enum Encoding : uint8_t {
   ENCODING_BI_PHASE,
 };
 
-class RMTView {
- public:
-  void set_light(const ESP32RMTLEDStripLightOutput *light) { this->light_ = light; }
-  virtual int generate_rmt_items(int index, const uint8_t *src, rmt_item32_t *item_dest, light::LightState *state) = 0;
-
- protected:
-  rmt_item32_t bit0_, bit1_;
-  uint32_t sync_start_;
-  Encoding encoding_ = ENCODING_PULSE_LENGTH;
-  const ESP32RMTLEDStripLightOutput *light_;
-};
-
-class DefaultRMTView final : public RMTView {
- public:
-  int generate_rmt_items(int index, const uint8_t *src, rmt_item32_t *item_dest, light::LightState *state) override;
-};
+using Generator = void(const ESP32RMTLEDStripLightOutput &light, int led_num, const uint8_t *src_buf,
+                       rmt_item32_t *dest_buf, light::LightState *state);
 
 class ESP32RMTLEDStripLightOutput : public light::AddressableLight {
  public:
@@ -90,8 +76,8 @@ class ESP32RMTLEDStripLightOutput : public light::AddressableLight {
 
   RGBOrder get_rgb_order() const { return this->rgb_order_; }
   void set_rgb_order(RGBOrder rgb_order) { this->rgb_order_ = rgb_order; }
-  void set_rmt_view(RMTView *rmt_view);
   void set_rmt_channel(rmt_channel_t channel) { this->channel_ = channel; }
+  void set_rmt_generator(std::function<Generator> gen) { this->rmt_generator_ = gen; }
 
   void set_bits_per_command(uint32_t bits) { this->bits_per_command_ = bits; }
 
@@ -117,8 +103,10 @@ class ESP32RMTLEDStripLightOutput : public light::AddressableLight {
       this->current_buf_ = !this->current_buf_;
   }
   bool bufs_same_at_index_(int i) const;
+  void rmt_write_items_(size_t len, bool wait_tx_done = false);
 
-  // uint8_t *buf_{nullptr};
+  static Generator default_rmt_generate;
+
   uint8_t *buf_[2];
   int current_buf_ = 0;
   uint8_t *effect_data_{nullptr};
@@ -136,7 +124,7 @@ class ESP32RMTLEDStripLightOutput : public light::AddressableLight {
   rmt_item32_t bit0_, bit1_;
   RGBOrder rgb_order_;
   Encoding encoding_ = ENCODING_PULSE_LENGTH;
-  std::unique_ptr<RMTView> rmt_view_;
+  std::function<Generator> rmt_generator_ = default_rmt_generate;
   rmt_channel_t channel_;
 
   uint32_t bits_per_command_ = 0;

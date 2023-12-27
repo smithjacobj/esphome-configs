@@ -27,24 +27,24 @@ RDSRGBW02Color get_rds_rgbw_02_color(const uint8_t *color_buf) {
   return RDS_RGBW_02_RED;
 }
 
-int RDSRGBW02RMTView::generate_rmt_items(const int index, const uint8_t *src, rmt_item32_t *dest,
-                                         light::LightState *state) {
+void RDSRGBW02RMTGenerator(const ESP32RMTLEDStripLightOutput &light, int index, const uint8_t *src, rmt_item32_t *dest,
+                           light::LightState *state) {
   const light::LightColorValues &values{state->current_values};
-  const bool is_white = (values.get_color_mode() == light::ColorMode::WHITE && !this->light_->is_effect_active()) ||
+  const bool is_white = (values.get_color_mode() == light::ColorMode::WHITE && !light.is_effect_active()) ||
                         src[3] > std::max(std::max(src[0], src[1]), src[2]);
-  const rmt_item32_t &bit0{this->light_->get_bit0()};
-  const rmt_item32_t &bit1{this->light_->get_bit1()};
-  int len = 0;
+  const rmt_item32_t &bit0{light.get_bit0()};
+  const rmt_item32_t &bit1{light.get_bit1()};
+  bool first_item = true;
 
   // address (4 bits)
   uint8_t address = (uint8_t) index + 1;
   for (int i = 3; i >= 0; i--) {
     dest->val = (address >> i) & 1 ? bit1.val : bit0.val;
-    if (len == 0 && this->light_->get_sync_start() > 0) {
-      dest->duration0 = this->light_->get_sync_start();
+    if (first_item && light.get_sync_start() > 0) {
+      first_item = false;
+      dest->duration0 = light.get_sync_start();
     }
     dest++;
-    len++;
   }
 
   // color enum (4 bits)
@@ -55,7 +55,6 @@ int RDSRGBW02RMTView::generate_rmt_items(const int index, const uint8_t *src, rm
   for (int i = 3; i >= 0; i--) {
     dest->val = (color >> i) & 1 ? bit1.val : bit0.val;
     dest++;
-    len++;
   }
 
   // rgb brightness (24 bits)
@@ -69,11 +68,8 @@ int RDSRGBW02RMTView::generate_rmt_items(const int index, const uint8_t *src, rm
     for (int j = 7; j >= 0; j--) {
       dest->val = (color >> j) & 1 ? bit1.val : bit0.val;
       dest++;
-      len++;
     }
   }
-
-  return len;
 }
 
 };  // namespace esp32_rmt_led_strip

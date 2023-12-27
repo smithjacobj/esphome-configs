@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from typing import Optional
 
 import esphome.codegen as cg
 import esphome.config_validation as cv
@@ -27,6 +28,7 @@ ESP32RMTLEDStripLightOutput = esp32_rmt_led_strip_ns.class_(
 )
 
 rmt_channel_t = cg.global_ns.enum("rmt_channel_t")
+rmt_item32_t = cg.global_ns.struct("rmt_item32_t")
 
 RGBOrder = esp32_rmt_led_strip_ns.enum("RGBOrder")
 
@@ -55,11 +57,12 @@ class LEDStripChipConfigs:
     bit1_high: int
     bit1_low: int
     encoding: Encoding = Encoding.ENCODING_PULSE_LENGTH
-    rmt_view: str = "esp32_rmt_led_strip::DefaultRMTView"
+    rmt_generator: Optional[str] = None
     sync_start: int = 0
     intermission: int = 0
     bits_per_command: int = 0
-    color_modes: list[ColorMode] = field(default_factory=lambda: [ColorMode.RGB])
+    color_modes: list[ColorMode] = field(
+        default_factory=lambda: [ColorMode.RGB])
     allow_partial_updates: bool = False
     internal_is_rgbw: bool = False
 
@@ -75,7 +78,7 @@ CHIPSETS = {
         22_000,
         61_000,
         encoding=Encoding.ENCODING_PULSE_DISTANCE,
-        rmt_view="esp32_rmt_led_strip::RDSRGBW02RMTView",
+        rmt_generator="esp32_rmt_led_strip::RDSRGBW02RMTGenerator",
         sync_start=77_000,
         intermission=5_000,
         bits_per_command=32,
@@ -96,7 +99,7 @@ CONF_BIT0_LOW = "bit0_low"
 CONF_BIT1_HIGH = "bit1_high"
 CONF_BIT1_LOW = "bit1_low"
 CONF_RMT_CHANNEL = "rmt_channel"
-CONF_RMT_MAPPING = "rmt_mapping"
+CONF_RMT_GENERATOR = "rmt_generator"
 CONF_ALLOW_PARTIAL_UPDATES = "allow_partial_updates"
 
 RMT_CHANNELS = {
@@ -128,7 +131,7 @@ CONFIG_SCHEMA = cv.All(
             cv.Required(CONF_NUM_LEDS): cv.positive_not_null_int,
             cv.Required(CONF_RGB_ORDER): cv.enum(RGB_ORDERS, upper=True),
             cv.Required(CONF_RMT_CHANNEL): _validate_rmt_channel,
-            cv.Optional(CONF_RMT_MAPPING): cv.string_strict,
+            cv.Optional(CONF_RMT_GENERATOR): cv.lambda_,
             cv.Optional(CONF_MAX_REFRESH_RATE): cv.positive_time_period_microseconds,
             cv.Optional(CONF_CHIPSET): cv.one_of(*CHIPSETS, upper=True),
             cv.Optional(CONF_IS_RGBW): cv.boolean,
@@ -180,7 +183,6 @@ async def to_code(config):
 
     if CONF_CHIPSET in config:
         chipset = CHIPSETS[config[CONF_CHIPSET]]
-        cg.add(var.set_rmt_view(cg.RawExpression(f"new {chipset.rmt_view}()")))
         cg.add(
             var.set_led_params(
                 chipset.bit0_high,
@@ -207,12 +209,10 @@ async def to_code(config):
 
         if chipset.internal_is_rgbw:
             cg.add(var.set_internal_is_rgbw(True))
-    else:
-        rmt_view = "DefaultRMTView"
-        if CONF_RMT_MAPPING in config:
-            rmt_view = chipset.rmt_view
-        cg.add(var.set_rmt_view(cg.RawExpression(f"new {rmt_view}()")))
 
+        if CONF_RMT_GENERATOR not in config and chipset.rmt_generator is not None:
+            cg.add(var.set_rmt_generator(cg.RawExpression(chipset.rmt_generator)))
+    else:
         cg.add(
             var.set_led_params(
                 config[CONF_BIT0_HIGH],
@@ -223,7 +223,8 @@ async def to_code(config):
         )
 
         if CONF_ALLOW_PARTIAL_UPDATES in config:
-            cg.add(var.set_allow_partial_updates(config[CONF_ALLOW_PARTIAL_UPDATES]))
+            cg.add(var.set_allow_partial_updates(
+                config[CONF_ALLOW_PARTIAL_UPDATES]))
 
         if CONF_ENCODING in config:
             cg.add(var.set_encoding(config[CONF_ENCODING]))
@@ -237,7 +238,8 @@ async def to_code(config):
     cg.add(var.set_rgb_order(config[CONF_RGB_ORDER]))
 
     if CONF_SUPPORTED_COLOR_MODES in config:
-        cg.add(var.set_supported_color_modes(config[CONF_SUPPORTED_COLOR_MODES]))
+        cg.add(var.set_supported_color_modes(
+            config[CONF_SUPPORTED_COLOR_MODES]))
     elif CONF_IS_RGBW in config:
         cg.add(var.set_is_rgbw(config[CONF_IS_RGBW]))
 
@@ -248,3 +250,23 @@ async def to_code(config):
             getattr(rmt_channel_t, f"RMT_CHANNEL_{config[CONF_RMT_CHANNEL]}")
         )
     )
+
+    if CONF_RMT_GENERATOR in config:
+        cg.add(
+            var.set_rmt_generator(
+                await cg.process_lambda(
+                    config[CONF_RMT_GENERATOR],
+                    [
+                        (
+                            ESP32RMTLEDStripLightOutput.operator(
+                                "const").operator("ref"),
+                            "light",
+                        ),
+                        (cg.int_, "index"),
+                        (cg.uint8.operator("const").operator("ptr"), "src_buf"),
+                        (rmt_item32_t.operator("ptr"), "dest_buf"),
+                        (light.LightState.operator("ptr"), "state"),
+                    ],
+                )
+            )
+        )

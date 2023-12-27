@@ -6,8 +6,6 @@
 
 #include "esphome/components/light/light_state.h"
 
-#include <driver/rmt.h>
-
 namespace esphome {
 namespace esp32_rmt_led_strip {
 
@@ -22,10 +20,7 @@ enum RDSRGBW02Color : uint8_t {
   RDS_RGBW_02_CYAN,
 };
 
-class RDSRGBW02RMTView final : public RMTView {
- public:
-  int generate_rmt_items(int index, const uint8_t *src, rmt_item32_t *dest, light::LightState *state) override;
-};
+Generator RDSRGBW02RMTGenerator;
 
 };  // namespace esp32_rmt_led_strip
 };  // namespace esphome
