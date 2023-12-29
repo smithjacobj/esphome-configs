@@ -77,7 +77,7 @@ class ESP32RMTLEDStripLightOutput : public light::AddressableLight {
   RGBOrder get_rgb_order() const { return this->rgb_order_; }
   void set_rgb_order(RGBOrder rgb_order) { this->rgb_order_ = rgb_order; }
   void set_rmt_channel(rmt_channel_t channel) { this->channel_ = channel; }
-  void set_rmt_generator(std::function<Generator> gen) { this->rmt_generator_ = gen; }
+  void set_rmt_generator(std::function<Generator> gen) { this->rmt_generator_ = std::move(gen); }
 
   void set_bits_per_command(uint32_t bits) { this->bits_per_command_ = bits; }
 

@@ -61,8 +61,7 @@ class LEDStripChipConfigs:
     sync_start: int = 0
     intermission: int = 0
     bits_per_command: int = 0
-    color_modes: list[ColorMode] = field(
-        default_factory=lambda: [ColorMode.RGB])
+    color_modes: list[ColorMode] = field(default_factory=lambda: [ColorMode.RGB])
     allow_partial_updates: bool = False
     internal_is_rgbw: bool = False
 
@@ -78,7 +77,7 @@ CHIPSETS = {
         22_000,
         61_000,
         encoding=Encoding.ENCODING_PULSE_DISTANCE,
-        rmt_generator="esp32_rmt_led_strip::RDSRGBW02RMTGenerator",
+        rmt_generator="esp32_rmt_led_strip::rds_rgbw_02_rmt_generator",
         sync_start=77_000,
         intermission=5_000,
         bits_per_command=32,
@@ -223,8 +222,7 @@ async def to_code(config):
         )
 
         if CONF_ALLOW_PARTIAL_UPDATES in config:
-            cg.add(var.set_allow_partial_updates(
-                config[CONF_ALLOW_PARTIAL_UPDATES]))
+            cg.add(var.set_allow_partial_updates(config[CONF_ALLOW_PARTIAL_UPDATES]))
 
         if CONF_ENCODING in config:
             cg.add(var.set_encoding(config[CONF_ENCODING]))
@@ -238,8 +236,7 @@ async def to_code(config):
     cg.add(var.set_rgb_order(config[CONF_RGB_ORDER]))
 
     if CONF_SUPPORTED_COLOR_MODES in config:
-        cg.add(var.set_supported_color_modes(
-            config[CONF_SUPPORTED_COLOR_MODES]))
+        cg.add(var.set_supported_color_modes(config[CONF_SUPPORTED_COLOR_MODES]))
     elif CONF_IS_RGBW in config:
         cg.add(var.set_is_rgbw(config[CONF_IS_RGBW]))
 
@@ -258,8 +255,9 @@ async def to_code(config):
                     config[CONF_RMT_GENERATOR],
                     [
                         (
-                            ESP32RMTLEDStripLightOutput.operator(
-                                "const").operator("ref"),
+                            ESP32RMTLEDStripLightOutput.operator("const").operator(
+                                "ref"
+                            ),
                             "light",
                         ),
                         (cg.int_, "index"),

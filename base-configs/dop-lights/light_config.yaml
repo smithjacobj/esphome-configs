@@ -21,6 +21,10 @@ effects:
       update_interval: 1h
       lambda: static_colors(it, {RED, GREEN});
   - addressable_lambda:
+      name: Red, White, Green
+      update_interval: 1h
+      lambda: static_colors(it, {RED, WHITE, GREEN});
+  - addressable_lambda:
       name: Five Color
       update_interval: 1h
       lambda: static_colors(it, {RED, GREEN, BLUE, YELLOW, PURPLE});

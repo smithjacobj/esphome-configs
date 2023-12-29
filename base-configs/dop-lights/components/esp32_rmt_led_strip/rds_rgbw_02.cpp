@@ -27,7 +27,7 @@ RDSRGBW02Color get_rds_rgbw_02_color(const uint8_t *color_buf) {
   return RDS_RGBW_02_RED;
 }
 
-void RDSRGBW02RMTGenerator(const ESP32RMTLEDStripLightOutput &light, int index, const uint8_t *src, rmt_item32_t *dest,
+void rds_rgbw_02_rmt_generator(const ESP32RMTLEDStripLightOutput &light, int index, const uint8_t *src, rmt_item32_t *dest,
                            light::LightState *state) {
   const light::LightColorValues &values{state->current_values};
   const bool is_white = (values.get_color_mode() == light::ColorMode::WHITE && !light.is_effect_active()) ||

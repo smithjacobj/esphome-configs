@@ -20,7 +20,7 @@ enum RDSRGBW02Color : uint8_t {
   RDS_RGBW_02_CYAN,
 };
 
-Generator RDSRGBW02RMTGenerator;
+Generator rds_rgbw_02_rmt_generator;
 
 };  // namespace esp32_rmt_led_strip
 };  // namespace esphome
