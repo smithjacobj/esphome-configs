@@ -13,6 +13,8 @@ const Color PURPLE{127, 0, 255, 0};
 const Color WHITE{0, 0, 0, 255};
 const Color BLACK{0, 0, 0, 0};
 
+const Color GOLD{255, 140, 0, 0};
+
 void static_colors(AddressableLight &it, std::vector<Color> colors) {
   for (int i = 0; i < it.size(); i++) {
     it[i] = colors[i % colors.size()];

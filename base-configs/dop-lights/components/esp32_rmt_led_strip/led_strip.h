@@ -93,8 +93,13 @@ class ESP32RMTLEDStripLightOutput : public light::AddressableLight {
 
   size_t get_bytes_per_led_() const { return 3 + this->is_rgbw_; }
   size_t get_bits_per_command_() const;
+  size_t get_items_per_command_() const;
   size_t get_buffer_size_() const { return this->num_leds_ * this->get_bytes_per_led_(); }
   size_t get_rmt_buffer_size_() const;
+
+  static uint32_t get_cycle_count_for_micros_delay_(uint32_t delay);
+  static uint32_t get_rmt_item_count_for_micros_delay_(uint32_t delay);
+  static void generate_rmt_items_for_micros_delay_(rmt_item32_t *dest, uint32_t delay);
 
   uint8_t *get_current_buf_() const { return buf_[this->current_buf_]; }
   uint8_t *get_old_buf_() const { return buf_[!this->current_buf_]; }
@@ -103,7 +108,7 @@ class ESP32RMTLEDStripLightOutput : public light::AddressableLight {
       this->current_buf_ = !this->current_buf_;
   }
   bool bufs_same_at_index_(int i) const;
-  void rmt_write_items_(size_t len, bool wait_tx_done = false);
+  bool rmt_write_items_(size_t len, bool wait_tx_done = false);
 
   static Generator default_rmt_generate;
 

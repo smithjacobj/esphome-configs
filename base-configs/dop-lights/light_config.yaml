@@ -32,6 +32,10 @@ effects:
       name: Seahawks
       update_interval: 1h
       lambda: static_colors(it, {GREEN, BLUE});
+  - addressable_lambda:
+      name: Huskies
+      update_interval: 1h
+      lambda: static_colors(it, {PURPLE, GOLD});
   - addressable_rainbow:
       name: ARE GEE BEE
       speed: 10

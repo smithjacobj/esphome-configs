@@ -17,6 +17,9 @@ static const char *const TAG = "esp32_rmt_led_strip";
 static constexpr uint8_t RMT_CLK_DIV = 2;
 static constexpr float CLK_RATIO = (float) APB_CLK_FREQ / RMT_CLK_DIV / 1e09f;
 
+// 15 bits of duration per each high/low per item
+static constexpr uint32_t MAX_CYCLES_PER_ITEM = (std::numeric_limits<uint16_t>::max() >> 1) * 2;
+
 void ESP32RMTLEDStripLightOutput::setup() {
   ESP_LOGCONFIG(TAG, "Setting up ESP32 LED Strip...");
 
@@ -134,19 +137,17 @@ void ESP32RMTLEDStripLightOutput::write_state(light::LightState *state) {
     }
 
     if (this->intermission_ > 0) {
-      this->rmt_write_items_(len, true);
-      len = 0;
-      dest = this->rmt_buf_;
-      delayMicroseconds(this->intermission_);
+      generate_rmt_items_for_micros_delay_(dest, this->intermission_);
+      const uint32_t delay_count = get_rmt_item_count_for_micros_delay_(this->intermission_);
+      dest += delay_count;
+      len += delay_count;
     }
   }
 
-  if (this->intermission_ == 0) {
-    this->rmt_write_items_(len);
+  if (this->rmt_write_items_(len)) {
+    this->status_clear_warning();
+    this->swap_buf_();
   }
-
-  this->status_clear_warning();
-  this->swap_buf_();
 }
 
 light::ESPColorView ESP32RMTLEDStripLightOutput::get_view_internal(int32_t index) const {
@@ -287,12 +288,38 @@ size_t ESP32RMTLEDStripLightOutput::get_bits_per_command_() const {
   return this->bits_per_command_ > 0 ? this->bits_per_command_ : this->get_bytes_per_led_() * 8;
 }
 
-size_t ESP32RMTLEDStripLightOutput::get_rmt_buffer_size_() const {
-  size_t bits = this->num_leds_ * this->get_bits_per_command_();
-  if (this->encoding_ == ENCODING_PULSE_DISTANCE) {
-    bits++;
+size_t ESP32RMTLEDStripLightOutput::get_items_per_command_() const {
+  int count = this->get_bits_per_command_();
+  count += (this->encoding_ == ENCODING_PULSE_DISTANCE);
+  if (this->intermission_ > 0) {
+    count += get_rmt_item_count_for_micros_delay_(this->intermission_);
   }
-  return bits;
+  return count;
+}
+
+size_t ESP32RMTLEDStripLightOutput::get_rmt_buffer_size_() const {
+  return this->num_leds_ * this->get_items_per_command_();
+}
+
+uint32_t ESP32RMTLEDStripLightOutput::get_cycle_count_for_micros_delay_(const uint32_t delay) {
+  return (uint32_t) (CLK_RATIO * delay * 1000);  // CLK_RATIO is to nanos
+}
+
+uint32_t ESP32RMTLEDStripLightOutput::get_rmt_item_count_for_micros_delay_(const uint32_t delay) {
+  return (uint32_t) std::ceil((float) get_cycle_count_for_micros_delay_(delay) / (float) MAX_CYCLES_PER_ITEM);
+}
+
+void ESP32RMTLEDStripLightOutput::generate_rmt_items_for_micros_delay_(rmt_item32_t *dest, const uint32_t delay) {
+  uint32_t cycles_remaining = get_cycle_count_for_micros_delay_(delay);
+  while (cycles_remaining > 0) {
+    dest->duration0 = std::min(cycles_remaining, MAX_CYCLES_PER_ITEM);
+    cycles_remaining -= dest->duration0;
+    dest->level0 = 0;
+    dest->duration1 = std::min(std::max(cycles_remaining, (uint32_t) 0), MAX_CYCLES_PER_ITEM);
+    cycles_remaining -= dest->duration1;
+    dest->level1 = 0;
+    dest++;
+  }
 }
 
 void ESP32RMTLEDStripLightOutput::set_supported_color_modes(const std::set<esphome::light::ColorMode> &color_modes) {
@@ -313,12 +340,13 @@ bool ESP32RMTLEDStripLightOutput::bufs_same_at_index_(const int i) const {
          buf0[i * bpc + 2] == buf1[i * bpc + 2] && (!this->is_rgbw_ || buf0[i * bpc + 3] == buf1[i * bpc + 3]);
 }
 
-void ESP32RMTLEDStripLightOutput::rmt_write_items_(const size_t len, const bool wait_tx_done) {
+bool ESP32RMTLEDStripLightOutput::rmt_write_items_(const size_t len, const bool wait_tx_done) {
   if (rmt_write_items(this->channel_, this->rmt_buf_, len, wait_tx_done) != ESP_OK) {
     ESP_LOGE(TAG, "RMT TX error");
     this->status_set_warning();
-    return;
+    return false;
   }
+  return true;
 }
 
 void ESP32RMTLEDStripLightOutput::default_rmt_generate(const ESP32RMTLEDStripLightOutput &light, const int index,
