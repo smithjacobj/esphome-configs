@@ -18,7 +18,8 @@ static constexpr uint8_t RMT_CLK_DIV = 2;
 static constexpr float CLK_RATIO = (float) APB_CLK_FREQ / RMT_CLK_DIV / 1e09f;
 
 // 15 bits of duration per each high/low per item
-static constexpr uint32_t MAX_CYCLES_PER_ITEM = (std::numeric_limits<uint16_t>::max() >> 1) * 2;
+static constexpr uint32_t MAX_CYCLES_PER_DURATION = std::numeric_limits<uint16_t>::max() >> 1;
+static constexpr uint32_t MAX_CYCLES_PER_ITEM = MAX_CYCLES_PER_DURATION * 2;
 
 void ESP32RMTLEDStripLightOutput::setup() {
   ESP_LOGCONFIG(TAG, "Setting up ESP32 LED Strip...");
@@ -144,7 +145,9 @@ void ESP32RMTLEDStripLightOutput::write_state(light::LightState *state) {
     }
   }
 
-  if (this->rmt_write_items_(len)) {
+  if (len > this->get_rmt_buffer_size_()) {
+    ESP_LOGE(TAG, "Attempting to write %d items to RMT buffer size %d", len, this->get_rmt_buffer_size_());
+  } else if (len > 0 && this->rmt_write_items_(len)) {
     this->status_clear_warning();
     this->swap_buf_();
   }
@@ -274,6 +277,8 @@ void ESP32RMTLEDStripLightOutput::dump_config() {
       break;
   }
   ESP_LOGCONFIG(TAG, "  Encoding: %s", encoding);
+
+  ESP_LOGD(TAG, "RMT item buffer size: %d", this->get_rmt_buffer_size_());
 }
 
 float ESP32RMTLEDStripLightOutput::get_setup_priority() const { return setup_priority::HARDWARE; }
@@ -302,7 +307,7 @@ size_t ESP32RMTLEDStripLightOutput::get_rmt_buffer_size_() const {
 }
 
 uint32_t ESP32RMTLEDStripLightOutput::get_cycle_count_for_micros_delay_(const uint32_t delay) {
-  return (uint32_t) (CLK_RATIO * delay * 1000);  // CLK_RATIO is to nanos
+  return (uint32_t) (CLK_RATIO * (float) delay * 1000.f);  // CLK_RATIO is to nanos
 }
 
 uint32_t ESP32RMTLEDStripLightOutput::get_rmt_item_count_for_micros_delay_(const uint32_t delay) {
@@ -310,13 +315,18 @@ uint32_t ESP32RMTLEDStripLightOutput::get_rmt_item_count_for_micros_delay_(const
 }
 
 void ESP32RMTLEDStripLightOutput::generate_rmt_items_for_micros_delay_(rmt_item32_t *dest, const uint32_t delay) {
-  uint32_t cycles_remaining = get_cycle_count_for_micros_delay_(delay);
+  // the RMT driver will glitch with duration values below this
+  static constexpr int32_t RMT_MIN_DURATION = (int32_t) std::ceil(2.f / CLK_RATIO);
+
+  assert(get_cycle_count_for_micros_delay_(delay) <= (std::numeric_limits<uint32_t>::max() >> 1));
+  int32_t cycles_remaining = (int32_t) get_cycle_count_for_micros_delay_(delay);
   while (cycles_remaining > 0) {
-    dest->duration0 = std::min(cycles_remaining, MAX_CYCLES_PER_ITEM);
-    cycles_remaining -= dest->duration0;
+    dest->duration0 = (uint32_t) std::min(cycles_remaining, (int32_t) MAX_CYCLES_PER_DURATION);
+    cycles_remaining -= (int32_t) dest->duration0;
     dest->level0 = 0;
-    dest->duration1 = std::min(std::max(cycles_remaining, (uint32_t) 0), MAX_CYCLES_PER_ITEM);
-    cycles_remaining -= dest->duration1;
+    dest->duration1 =
+        (uint32_t) std::min(std::max(cycles_remaining, (int32_t) RMT_MIN_DURATION), (int32_t) MAX_CYCLES_PER_DURATION);
+    cycles_remaining -= (int32_t) dest->duration1;
     dest->level1 = 0;
     dest++;
   }
