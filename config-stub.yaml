@@ -1,0 +1,14 @@
+packages:
+  lolin32: !include board-configs/lolin32.yaml
+
+esphome:
+  name: status
+
+logger:
+
+wifi:
+  networks:
+    <<: !secret WIFI_NETWORKS
+
+status_led:
+  pin: GPIO5

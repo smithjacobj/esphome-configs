@@ -1,0 +1,4 @@
+esp32:
+  board: lolin32
+  framework:
+    type: esp-idf

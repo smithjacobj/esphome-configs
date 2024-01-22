@@ -1,0 +1,36 @@
+packages:
+  lolin32: !include ../../board-configs/lolin32.yaml
+
+esphome:
+  name: doorbell
+  # libraries:
+  #   - https://github.com/joltwallet/esp_littlefs.git
+  includes: 
+    - base-configs/doorbell/ding-dong.h
+
+logger:
+ota:
+
+wifi:
+  networks:
+    <<: !secret WIFI_NETWORKS
+  on_connect:
+    - rtttl.play: 'siren:d=8,o=5,b=100:d,e,d,e,d,e,d,e'
+    - speaker.play: !lambda return dingDongPCM;
+
+status_led:
+  pin: GPIO5
+
+i2s_audio:
+  i2s_lrclk_pin: GPIO17
+  i2s_bclk_pin: GPIO16
+
+speaker:
+  - id: speaker1
+    platform: i2s_audio
+    dac_type: external
+    i2s_dout_pin: GPIO4
+    mode: mono
+
+rtttl:
+  speaker: speaker1
