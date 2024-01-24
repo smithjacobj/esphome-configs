@@ -1,0 +1,6 @@
+#pragma once
+
+// C++20 should already have std::span
+#if !(__cplusplus >= 202002L || (defined(_MSVC_LANG) && _MSVC_LANG >= 202002L))
+#include "tcb/span.hpp"
+#endif // < C++20

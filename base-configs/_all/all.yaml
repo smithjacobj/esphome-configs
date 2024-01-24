@@ -1,0 +1,7 @@
+esphome:
+  includes:
+    - external/span/include
+  platformio_options:
+    build_flags: 
+      - -Isrc/include
+      - -DTCB_SPAN_NAMESPACE_NAME=std
