@@ -146,8 +146,8 @@ sensor:
       - { phase_id: phase_b, input: "10", power: { name: "Upstairs Smoke Detectors", id: cir10, filters: [ *moving_avg, *pos ] } }
       - { phase_id: phase_b, input: "11", power: { name: "Upstairs GFCI", id: cir11, filters: [ *moving_avg, *pos ] } }
       - { phase_id: phase_a, input: "12", power: { name: "Dryer Leg 1", id: cir12, filters: [ *moving_avg, *pos ] } }
+      - { phase_id: phase_a, input: "13", power: { name: "Master Bath Floor Heat Leg 1", id: cir13, filters: [ *moving_avg, *pos ] } }
       # these inputs are currently unused
-      # - { phase_id: phase_a, input: "13", power: { name: "Unnamed Circuit 13", id: cir13, filters: [ *moving_avg, *pos ] } }
       # - { phase_id: phase_a, input: "14", power: { name: "Unnamed Circuit 14", id: cir14, filters: [ *moving_avg, *pos ] } }
       # - { phase_id: phase_a, input: "15", power: { name: "Unnamed Circuit 15", id: cir15, filters: [ *moving_avg, *pos ] } }
       # - { phase_id: phase_a, input: "16", power: { name: "Unnamed Circuit 16", id: cir16, filters:
@@ -175,8 +175,8 @@ sensor:
   - { power_id: cir10, platform: total_daily_energy, accuracy_decimals: 0, name: "Upstairs Smoke Detectors Daily Energy" }
   - { power_id: cir11, platform: total_daily_energy, accuracy_decimals: 0, name: "Upstairs GFCI Daily Energy" }
   - { power_id: cir12, platform: total_daily_energy, accuracy_decimals: 0, name: "Dryer Leg 1 Daily Energy" }
+  - { power_id: cir13, platform: total_daily_energy, accuracy_decimals: 0, name: "Master Bath Floor Heat Leg 1 Daily Energy" }
   # these inputs are currently unused
-  # - { power_id: cir13, platform: total_daily_energy, accuracy_decimals: 0, name: "Unnamed Circuit 13" }
   # - { power_id: cir14, platform: total_daily_energy, accuracy_decimals: 0, name: "Unnamed Circuit 14" }
   # - { power_id: cir15, platform: total_daily_energy, accuracy_decimals: 0, name: "Unnamed Circuit 15" }
   # - { power_id: cir16, platform: total_daily_energy, accuracy_decimals: 0, name: "Unnamed Circuit 16" }
