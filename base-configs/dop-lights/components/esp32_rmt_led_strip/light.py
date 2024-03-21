@@ -72,9 +72,9 @@ CHIPSETS = {
     "APA106": LEDStripChipConfigs(350, 1360, 1360, 350),
     "SM16703": LEDStripChipConfigs(300, 900, 1360, 350),
     "RDS-RGBW-02": LEDStripChipConfigs(
+        25_000,
         22_000,
-        22_000,
-        22_000,
+        25_000,
         61_000,
         encoding=Encoding.ENCODING_PULSE_DISTANCE,
         rmt_generator="esp32_rmt_led_strip::rds_rgbw_02_rmt_generator",

@@ -13,7 +13,7 @@ external_components:
   - source:
       type: local
       path: base-configs/doorbell/components
-    components: [speaker]
+    components: [speaker, i2s_audio]
 
 logger:
 ota:
@@ -48,9 +48,4 @@ binary_sensor:
       - speaker.play: !lambda return highPCM;
     on_release:
       - speaker.stop
-      - wait_until:
-          condition:
-            not:
-              speaker.is_playing
-          timeout: 25ms
       - speaker.play: !lambda return lowPCM;

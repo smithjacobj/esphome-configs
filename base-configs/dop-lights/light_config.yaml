@@ -9,6 +9,10 @@ effects:
       name: Shimmer
       update_interval: 100ms
       lambda: shimmer(it, current_color);
+  - addressable_lambda:
+      name: Easter
+      update_interval: 1000ms
+      lambda: palette_marquee(it, {pastel::YELLOW, pastel::BLUE, pastel::PINK});
   - addressable_rainbow:
       speed: 10
       width: 15
