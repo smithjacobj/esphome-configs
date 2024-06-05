@@ -1,0 +1,23 @@
+substitutions:
+  CH0_PIN: GPIO18
+  CH0_FAULT_PIN: GPIO4
+
+  CH1_PIN: GPIO10
+  CH1_FAULT_PIN: GPIO3
+
+packages:
+  esp32-c3: !include ../../board-configs/esp32-c3.yaml
+
+esphome:
+  name: ${DEVICE_NAME}
+
+logger:
+  level: ${LOG_LEVEL}
+
+wifi:
+  networks:
+    <<: !secret WIFI_NETWORKS
+    
+api:
+ota:
+bluetooth_proxy:
