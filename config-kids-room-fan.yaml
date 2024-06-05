@@ -1,0 +1,6 @@
+<<: !include
+  file: base-configs/jyqd-v88b-fan-controller/config.yaml
+  vars:
+    DEVICE_NAME: kids-room-fan
+    DEVICE_FRIENDLY_NAME: Kids Room Fan
+    LOG_LEVEL: DEBUG
