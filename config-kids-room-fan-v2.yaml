@@ -1,0 +1,6 @@
+<<: !include
+  file: base-configs/tvda-td-h0-jx-v18g-fan-controller/config.yaml
+  vars:
+    DEVICE_NAME: kids-room-fan-v2
+    DEVICE_FRIENDLY_NAME: Kids Room Fan
+    LOG_LEVEL: VERBOSE

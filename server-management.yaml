@@ -1,0 +1,48 @@
+packages:
+  board: !include board-configs/lolin32.yaml
+
+esphome:
+  name: servermgmt
+
+logger:
+
+wifi:
+  networks:
+    <<: !secret WIFI_NETWORKS
+
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: US/Pacific
+    
+web_server:
+  local: true
+  auth:
+    <<: !secret SERVER_MANAGEMENT_WEBSERVER_AUTH
+
+wireguard:
+  <<: !secret SERVER_MANAGEMENT_WIREGUARD_CONFIG
+  address: 172.16.0.5
+  netmask: 255.255.0.0
+  peer_allowed_ips: 172.16.0.0/16
+
+switch:
+  - platform: gpio
+    pin: GPIO4
+    id: power
+    internal: true
+    restore_mode: ALWAYS_OFF
+
+button:
+  - platform: template
+    name: Power, short press
+    on_press:
+      - switch.turn_on: power
+      - delay: 500ms
+      - switch.turn_off: power
+  - platform: template
+    name: Power, long press (e.g. force power off)
+    on_press:
+      - switch.turn_on: power
+      - delay: 7s
+      - switch.turn_off: power
