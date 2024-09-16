@@ -15,7 +15,8 @@ substitutions:
   MC_PWM_FREQ: 4882Hz # 14 bits of resolution available on ESP32, see
                       # https://esphome.io/components/output/ledc#recommended-frequencies 
   # TODO: use a low value and turn it up as we test. This controls the maximum allowed called for speed.
-  MAX_PWM_DUTY: "0.05"
+  MIN_PWM_DUTY: "0.025"
+  MAX_PWM_DUTY: "0.1" # .05 is about 144RPM
 
 packages:
   esp32-c3: !include ../../board-configs/esp32-c3.yaml
@@ -33,6 +34,7 @@ wifi:
 
 api:
 ota:
+  platform: esphome
 
 output:
   - platform: template
@@ -49,27 +51,36 @@ output:
             output.turn_on: fan_reverse_output
   - platform: gpio
     id: fan_reverse_output
-    pin: ${REVERSE_PIN}
-
+    pin:
+      number: ${REVERSE_PIN}
+      mode:
+        pulldown: true
+        output: true
   # this is the raw GPIO PWM output to the fan controller  
   - platform: ledc
-    pin:
-      number: ${SPEED_PIN}
-      mode:
-        input: true
-        pulldown: true
+    pin: ${SPEED_PIN}
     id: fan_speed_pwm_control
     frequency: ${MC_PWM_FREQ}
+    min_power: ${MIN_PWM_DUTY}
     max_power: ${MAX_PWM_DUTY}
+    zero_means_zero: true
 
 sensor:
   # handy for troubleshooting
   - platform: wifi_signal
     name: WiFi Signal
   - platform: pulse_counter
-    internal: true # if we decide to expose this we'll do it as a template exposing RPM
+    name: Fan Speed
     id: fan_speed_sensor
-    pin: ${SPEED_SENSOR_PIN}
+    update_interval: 5s
+    pin:
+      number: ${SPEED_SENSOR_PIN}
+      mode:
+        input: true
+        pulldown: true
+    filters:
+      - multiply: .025
+    unit_of_measurement: RPM
 
 fan:
   # this is the actual control we want exposed to HA
@@ -78,3 +89,4 @@ fan:
     name: Fan Speed
     direction_output: fan_direction
     restore_mode: RESTORE_DEFAULT_OFF
+    speed_count: 6
