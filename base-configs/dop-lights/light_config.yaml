@@ -44,3 +44,7 @@ effects:
       name: ARE GEE BEE
       speed: 10
       width: 150
+  - addressable_lambda:
+      name: Halloween
+      update_interval: 1s
+      lambda: palette_randomizer(it, {REDORANGE, PURPLE, CHARTREUSE});

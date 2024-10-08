@@ -22,6 +22,7 @@ wifi:
 
 api:
 ota:
+  platform: esphome
 
 external_components:
   - source: base-configs/dop-lights/components

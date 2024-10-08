@@ -14,6 +14,8 @@ const Color WHITE{0, 0, 0, 255};
 const Color BLACK{0, 0, 0, 0};
 
 const Color GOLD{255, 140, 0, 0};
+const Color REDORANGE{255, 112, 0, 0};
+const Color CHARTREUSE{155, 255, 0, 0};
 
 namespace pastel {
   const Color GREEN{0, 255, 100, 0};
@@ -51,6 +53,15 @@ void shimmer(AddressableLight &it, const Color &current_color) {
   delay_map[id] = millis() + delay_generator(gen);
   size_t light_index = light_selector(gen) % it.size();
   it[light_index] = BLACK;
+}
+
+void palette_randomizer(AddressableLight &it, std::vector<Color> colors) {
+  const size_t id = reinterpret_cast<size_t>(&it);
+
+  for (int i = 0; i < it.size(); i++) {
+    size_t color_index = light_selector(gen) % colors.size();
+    it[i] = colors[color_index];
+  }
 }
 
 namespace {

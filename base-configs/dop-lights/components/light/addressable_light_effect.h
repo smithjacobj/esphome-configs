@@ -41,9 +41,6 @@ class AddressableLightEffect : public LightEffect {
   void apply() override {
     // not using any color correction etc. that will be handled by the addressable layer through ESPColorCorrection
     Color current_color = color_from_light_color_values(this->state_->remote_values);
-    if (this->state_->remote_values.get_color_mode() & ColorCapability::WHITE) {
-      current_color = Color{0, 0, 0, to_uint8_scale(this->state_->remote_values.get_brightness())};
-    }
     this->apply(*this->get_addressable_(), current_color);
   }
 
@@ -103,6 +100,7 @@ struct AddressableColorWipeEffectColor {
   uint8_t r, g, b, w;
   bool random;
   size_t num_leds;
+  bool gradient;
 };
 
 class AddressableColorWipeEffect : public AddressableLightEffect {
@@ -116,16 +114,25 @@ class AddressableColorWipeEffect : public AddressableLightEffect {
     if (now - this->last_add_ < this->add_led_interval_)
       return;
     this->last_add_ = now;
-    if (this->reverse_)
+    if (this->reverse_) {
       it.shift_left(1);
-    else
+    } else {
       it.shift_right(1);
-    const AddressableColorWipeEffectColor color = this->colors_[this->at_color_];
-    const Color esp_color = Color(color.r, color.g, color.b, color.w);
-    if (this->reverse_)
+    }
+    const AddressableColorWipeEffectColor &color = this->colors_[this->at_color_];
+    Color esp_color = Color(color.r, color.g, color.b, color.w);
+    if (color.gradient) {
+      size_t next_color_index = (this->at_color_ + 1) % this->colors_.size();
+      const AddressableColorWipeEffectColor &next_color = this->colors_[next_color_index];
+      const Color next_esp_color = Color(next_color.r, next_color.g, next_color.b, next_color.w);
+      uint8_t gradient = 255 * ((float) this->leds_added_ / color.num_leds);
+      esp_color = esp_color.gradient(next_esp_color, gradient);
+    }
+    if (this->reverse_) {
       it[-1] = esp_color;
-    else
+    } else {
       it[0] = esp_color;
+    }
     if (++this->leds_added_ >= color.num_leds) {
       this->leds_added_ = 0;
       this->at_color_ = (this->at_color_ + 1) % this->colors_.size();
@@ -202,10 +209,11 @@ class AddressableTwinkleEffect : public AddressableLightEffect {
         const uint8_t sine = half_sin8(view.get_effect_data());
         view = current_color * sine;
         const uint8_t new_pos = view.get_effect_data() + pos_add;
-        if (new_pos < view.get_effect_data())
+        if (new_pos < view.get_effect_data()) {
           view.set_effect_data(0);
-        else
+        } else {
           view.set_effect_data(new_pos);
+        }
       } else {
         view = Color::BLACK;
       }
@@ -249,10 +257,11 @@ class AddressableRandomTwinkleEffect : public AddressableLightEffect {
           view = Color(((color >> 2) & 1) * sine, ((color >> 1) & 1) * sine, ((color >> 0) & 1) * sine);
         }
         const uint8_t new_x = x + pos_add;
-        if (new_x > 0b11111)
+        if (new_x > 0b11111) {
           view.set_effect_data(0);
-        else
+        } else {
           view.set_effect_data((new_x << 3) | color);
+        }
       } else {
         view = Color(0, 0, 0, 0);
       }
