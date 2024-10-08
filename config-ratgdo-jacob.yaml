@@ -1,0 +1,6 @@
+substitutions:
+  id_prefix: garage_door_jacob
+  friendly_name: Jacob's Garage Door
+
+packages:
+  ratgdo: !include base-configs/ratgdo/config.yaml

@@ -1,0 +1,6 @@
+substitutions:
+  id_prefix: garage_door_tiffany
+  friendly_name: Tiffany's Garage Door
+
+packages:
+  ratgdo: !include base-configs/ratgdo/config.yaml
