@@ -1,0 +1,21 @@
+packages:
+  esp32-c3: !include board-configs/esp32-c3.yaml
+
+esphome:
+  name: c3-supermini-burnin
+  friendly_name: C3 Supermini WiFi Burn-in Tester
+  
+logger:
+  level: DEBUG
+
+api:
+ota:
+  platform: esphome
+
+wifi:
+  networks:
+    <<: !secret WIFI_NETWORKS
+
+sensor:
+  - platform: wifi_signal
+    name: WiFi Signal
