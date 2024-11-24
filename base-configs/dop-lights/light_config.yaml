@@ -33,6 +33,10 @@ effects:
       update_interval: 1h
       lambda: static_colors(it, {RED, GREEN, BLUE, YELLOW, PURPLE});
   - addressable_lambda:
+      name: Five Color Random
+      update_interval: 1s
+      lambda: palette_randomizer(it, {RED, GREEN, BLUE, YELLOW, PURPLE});
+  - addressable_lambda:
       name: Seahawks
       update_interval: 1h
       lambda: static_colors(it, {GREEN, BLUE});
@@ -47,4 +51,8 @@ effects:
   - addressable_lambda:
       name: Halloween
       update_interval: 1s
-      lambda: palette_randomizer(it, {REDORANGE, PURPLE, CHARTREUSE});
+      lambda: palette_randomizer(it, {REDORANGE, REDORANGE, REDORANGE, PURPLE, PURPLE, PURPLE, CHARTREUSE});
+  - addressable_lambda:
+      name: Halloween Rotation
+      update_interval: 1s
+      lambda: palette_rotation(it, {REDORANGE, PURPLE, CHARTREUSE});
