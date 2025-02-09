@@ -1,0 +1,32 @@
+substitutions:
+  SWITCH_PIN: GPIO4
+
+packages:
+  esp32-c3: !include ../../board-configs/esp32-c3.yaml
+
+esphome:
+  name: ${DEVICE_NAME}
+  friendly_name: ${DEVICE_FRIENDLY_NAME}
+
+wifi:
+  networks:
+    <<: !secret WIFI_NETWORKS
+
+logger:
+  
+# Remove this line if you're not using Home Assistsant or your switch will restart every now and again
+api:
+
+ota:
+  platform: esphome
+
+sensor:
+  - platform: wifi_signal
+    name: "WiFi Signal"
+    update_interval: 60s
+
+switch:
+  - platform: gpio
+    pin: ${SWITCH_PIN}
+    name: Power
+    restore_mode: RESTORE_DEFAULT_OFF
