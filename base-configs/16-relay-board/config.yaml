@@ -257,11 +257,9 @@ number:
     restore_value: true
     optimistic: true
 
-switch:
-  - platform: template
-    id: fire_sequence
-    name: fire_sequence
-    turn_on_action:
+script:
+  - id: fire_sequence_script
+    then:
       - switch.turn_on: relay_a0
       - delay: !lambda return id(open_dwell_ms).state;
       - switch.turn_off: relay_a0
@@ -326,7 +324,38 @@ switch:
       - delay: !lambda return id(open_dwell_ms).state;
       - switch.turn_off: relay_a17
       - delay: 2s
+
+switch:
+  - platform: template
+    id: repeat_fire_sequence
+    name: Repeat
+    optimistic: true
+  - platform: template
+    id: fire_sequence
+    name: Fire Sequence
+    optimistic: true
+    turn_on_action:
+      - script.execute: fire_sequence_script
+      - script.wait: fire_sequence_script
+      - while:
+          condition:
+            and:
+              - switch.is_on: repeat_fire_sequence
+              - switch.is_on: fire_sequence
+          then:
+            - script.execute: fire_sequence_script
+            - script.wait: fire_sequence_script
       - switch.turn_off: fire_sequence
+      
+  - platform: template
+    id: fire_a0
+    name: Test Fire A0
+    turn_on_action:
+      - switch.turn_on: relay_a0
+      - delay: !lambda return id(open_dwell_ms).state;
+      - switch.turn_off: relay_a0
+      - delay: 2s
+      - switch.turn_off: fire_a0
   - platform: gpio
     id: relay_a0
     pin:
