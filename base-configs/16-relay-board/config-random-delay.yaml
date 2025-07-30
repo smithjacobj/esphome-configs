@@ -1,0 +1,276 @@
+substitutions:
+  MIN_DWELL_MS: "10"
+  MAX_DWELL_MS: "100"
+  DWELL_INITIAL_VALUE: "25"
+  DWELL_STEP: "1"
+  MIN_POST_DELAY_MS: "25"
+  MAX_POST_DELAY_MS: "750"
+  POST_DELAY_INITIAL_VALUE: "50"
+  POST_DELAY_STEP: "25"
+
+globals:
+  - id: min_post_delay_ms
+    type: int
+    restore_value: no
+    initial_value: ${MIN_POST_DELAY_MS}
+  - id: max_post_delay_ms
+    type: int
+    restore_value: no
+    initial_value: ${MAX_POST_DELAY_MS}
+
+packages:
+  esp32-c3: !include ../../board-configs/lolin32.yaml
+
+esphome:
+  name: ${DEVICE_NAME}
+  friendly_name: ${DEVICE_FRIENDLY_NAME}
+
+wifi:
+  networks:
+    <<: !secret WIFI_NETWORKS
+
+logger:
+  
+# Remove this line if you're not using Home Assistsant or your switch will restart every now and again
+api:
+
+ota:
+  platform: esphome
+
+sensor:
+  - platform: wifi_signal
+    name: "WiFi Signal"
+    update_interval: 60s
+
+i2c:
+  sda: GPIO21
+  scl: GPIO22
+  scan: false
+  frequency: 400kHz
+
+xl9535:
+  - id: relay_board_a
+
+number:
+  - platform: template
+    id: open_dwell_ms
+    name: "Open Dwell Time"
+    min_value: ${MIN_DWELL_MS}
+    max_value: ${MAX_DWELL_MS}
+    step: ${DWELL_STEP}
+    initial_value: ${DWELL_INITIAL_VALUE}
+    restore_value: true
+    optimistic: true
+
+script:
+  - id: fire_sequence_script
+    then:
+      - switch.turn_on: relay_a0
+      - delay: !lambda return id(open_dwell_ms).state;
+      - switch.turn_off: relay_a0
+      - delay: !lambda return rand() % (id(max_post_delay_ms) - id(min_post_delay_ms)) + id(min_post_delay_ms);
+      - switch.turn_on: relay_a1
+      - delay: !lambda return id(open_dwell_ms).state;
+      - switch.turn_off: relay_a1
+      - delay: !lambda return rand() % (id(max_post_delay_ms) - id(min_post_delay_ms)) + id(min_post_delay_ms);
+      - switch.turn_on: relay_a2
+      - delay: !lambda return id(open_dwell_ms).state;
+      - switch.turn_off: relay_a2
+      - delay: !lambda return rand() % (id(max_post_delay_ms) - id(min_post_delay_ms)) + id(min_post_delay_ms);
+      - switch.turn_on: relay_a3
+      - delay: !lambda return id(open_dwell_ms).state;
+      - switch.turn_off: relay_a3
+      - delay: !lambda return rand() % (id(max_post_delay_ms) - id(min_post_delay_ms)) + id(min_post_delay_ms);
+      - switch.turn_on: relay_a4
+      - delay: !lambda return id(open_dwell_ms).state;
+      - switch.turn_off: relay_a4
+      - delay: !lambda return rand() % (id(max_post_delay_ms) - id(min_post_delay_ms)) + id(min_post_delay_ms);
+      - switch.turn_on: relay_a5
+      - delay: !lambda return id(open_dwell_ms).state;
+      - switch.turn_off: relay_a5
+      - delay: !lambda return rand() % (id(max_post_delay_ms) - id(min_post_delay_ms)) + id(min_post_delay_ms);
+      - switch.turn_on: relay_a6
+      - delay: !lambda return id(open_dwell_ms).state;
+      - switch.turn_off: relay_a6
+      - delay: !lambda return rand() % (id(max_post_delay_ms) - id(min_post_delay_ms)) + id(min_post_delay_ms);
+      - switch.turn_on: relay_a7
+      - delay: !lambda return id(open_dwell_ms).state;
+      - switch.turn_off: relay_a7
+      - delay: !lambda return rand() % (id(max_post_delay_ms) - id(min_post_delay_ms)) + id(min_post_delay_ms);
+      - switch.turn_on: relay_a10
+      - delay: !lambda return id(open_dwell_ms).state;
+      - switch.turn_off: relay_a10
+      - delay: !lambda return rand() % (id(max_post_delay_ms) - id(min_post_delay_ms)) + id(min_post_delay_ms);
+      - switch.turn_on: relay_a11
+      - delay: !lambda return id(open_dwell_ms).state;
+      - switch.turn_off: relay_a11
+      - delay: !lambda return rand() % (id(max_post_delay_ms) - id(min_post_delay_ms)) + id(min_post_delay_ms);
+      - switch.turn_on: relay_a12
+      - delay: !lambda return id(open_dwell_ms).state;
+      - switch.turn_off: relay_a12
+      - delay: !lambda return rand() % (id(max_post_delay_ms) - id(min_post_delay_ms)) + id(min_post_delay_ms);
+      - switch.turn_on: relay_a13
+      - delay: !lambda return id(open_dwell_ms).state;
+      - switch.turn_off: relay_a13
+      - delay: !lambda return rand() % (id(max_post_delay_ms) - id(min_post_delay_ms)) + id(min_post_delay_ms);
+      - switch.turn_on: relay_a14
+      - delay: !lambda return id(open_dwell_ms).state;
+      - switch.turn_off: relay_a14
+      - delay: !lambda return rand() % (id(max_post_delay_ms) - id(min_post_delay_ms)) + id(min_post_delay_ms);
+      - switch.turn_on: relay_a15
+      - delay: !lambda return id(open_dwell_ms).state;
+      - switch.turn_off: relay_a15
+      - delay: !lambda return rand() % (id(max_post_delay_ms) - id(min_post_delay_ms)) + id(min_post_delay_ms);
+      - switch.turn_on: relay_a16
+      - delay: !lambda return id(open_dwell_ms).state;
+      - switch.turn_off: relay_a16
+      - delay: !lambda return rand() % (id(max_post_delay_ms) - id(min_post_delay_ms)) + id(min_post_delay_ms);
+      - switch.turn_on: relay_a17
+      - delay: !lambda return id(open_dwell_ms).state;
+      - switch.turn_off: relay_a17
+      - delay: !lambda return rand() % (5000 - 500) + 500;
+
+switch:
+  - platform: template
+    id: repeat_fire_sequence
+    name: Repeat
+    optimistic: true
+  - platform: template
+    id: fire_sequence
+    name: Fire Sequence
+    optimistic: true
+    turn_on_action:
+      - script.execute: fire_sequence_script
+      - script.wait: fire_sequence_script
+      - while:
+          condition:
+            and:
+              - switch.is_on: repeat_fire_sequence
+              - switch.is_on: fire_sequence
+          then:
+            - script.execute: fire_sequence_script
+            - script.wait: fire_sequence_script
+      - switch.turn_off: fire_sequence
+      
+  - platform: template
+    id: fire_a0
+    name: Test Fire A0
+    turn_on_action:
+      - switch.turn_on: relay_a0
+      - delay: !lambda return id(open_dwell_ms).state;
+      - switch.turn_off: relay_a0
+      - delay: 2s
+      - switch.turn_off: fire_a0
+  - platform: gpio
+    id: relay_a0
+    pin:
+      xl9535: relay_board_a
+      number: 0
+      mode:
+        output: true
+  - platform: gpio
+    id: relay_a1
+    pin:
+      xl9535: relay_board_a
+      number: 1
+      mode:
+        output: true
+  - platform: gpio
+    id: relay_a2
+    pin:
+      xl9535: relay_board_a
+      number: 2
+      mode:
+        output: true
+  - platform: gpio
+    id: relay_a3
+    pin:
+      xl9535: relay_board_a
+      number: 3
+      mode:
+        output: true
+  - platform: gpio
+    id: relay_a4
+    pin:
+      xl9535: relay_board_a
+      number: 4
+      mode:
+        output: true
+  - platform: gpio
+    id: relay_a5
+    pin:
+      xl9535: relay_board_a
+      number: 5
+      mode:
+        output: true
+  - platform: gpio
+    id: relay_a6
+    pin:
+      xl9535: relay_board_a
+      number: 6
+      mode:
+        output: true
+  - platform: gpio
+    id: relay_a7
+    pin:
+      xl9535: relay_board_a
+      number: 7
+      mode:
+        output: true
+  - platform: gpio
+    id: relay_a10
+    pin:
+      xl9535: relay_board_a
+      number: 10
+      mode:
+        output: true
+  - platform: gpio
+    id: relay_a11
+    pin:
+      xl9535: relay_board_a
+      number: 11
+      mode:
+        output: true
+  - platform: gpio
+    id: relay_a12
+    pin:
+      xl9535: relay_board_a
+      number: 12
+      mode:
+        output: true
+  - platform: gpio
+    id: relay_a13
+    pin:
+      xl9535: relay_board_a
+      number: 13
+      mode:
+        output: true
+  - platform: gpio
+    id: relay_a14
+    pin:
+      xl9535: relay_board_a
+      number: 14
+      mode:
+        output: true
+  - platform: gpio
+    id: relay_a15
+    pin:
+      xl9535: relay_board_a
+      number: 15
+      mode:
+        output: true
+  - platform: gpio
+    id: relay_a16
+    pin:
+      xl9535: relay_board_a
+      number: 16
+      mode:
+        output: true
+  - platform: gpio
+    id: relay_a17
+    pin:
+      xl9535: relay_board_a
+      number: 17
+      mode:
+        output: true
+
