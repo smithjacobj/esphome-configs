@@ -26,6 +26,7 @@ api:
             rtttl: !lambda 'return song_str;'
 
 ota:
+  platform: esphome
   # Create a secure password for pushing OTA updates.
   password: !secret EMPORIA_VUE_OTA_PASSWORD
 
@@ -40,6 +41,10 @@ preferences:
   # the default of 1min is far too short--flash chip is rated
   # for approx 100k writes.
   flash_write_interval: "48h"
+
+switch:
+  - platform: restart
+    name: Restart
 
 output:
   - platform: ledc
